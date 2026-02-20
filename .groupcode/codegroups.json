@@ -1,0 +1,836 @@
+{
+  "rs": [
+    {
+      "functionality": "apiendpoints",
+      "description": "Middleware placeholder (CORS handled in server.rs via tower-http)",
+      "filePath": "src/api/middleware.rs",
+      "lineNumbers": "1"
+    },
+    {
+      "functionality": "apiendpoints",
+      "description": "REST API router assembly",
+      "filePath": "src/api/mod.rs",
+      "lineNumbers": "1-17"
+    },
+    {
+      "functionality": "configuration",
+      "description": "Platform-aware path resolution",
+      "filePath": "src/config/paths.rs",
+      "lineNumbers": "1-44"
+    },
+    {
+      "functionality": "exports",
+      "description": "Config module re-exports",
+      "filePath": "src/config/mod.rs",
+      "lineNumbers": "1-6"
+    },
+    {
+      "functionality": "configuration",
+      "description": "Ecosystem and app configuration types",
+      "filePath": "src/config/ecosystem.rs",
+      "lineNumbers": "1-64"
+    },
+    {
+      "functionality": "configuration",
+      "description": "Daemon runtime configuration",
+      "filePath": "src/config/daemon_config.rs",
+      "lineNumbers": "1-23"
+    },
+    {
+      "functionality": "errorhandling",
+      "description": "API error type with automatic HTTP response conversion",
+      "filePath": "src/api/error.rs",
+      "lineNumbers": "1-44"
+    },
+    {
+      "functionality": "exports",
+      "description": "Models module re-exports",
+      "filePath": "src/models/mod.rs",
+      "lineNumbers": "1-6"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "Read historical log lines from disk",
+      "filePath": "src/logging/reader.rs",
+      "lineNumbers": "1-7"
+    },
+    {
+      "functionality": "types",
+      "description": "Serializable snapshot of a managed process (sent over API)",
+      "filePath": "src/models/process_info.rs",
+      "lineNumbers": "1-27"
+    },
+    {
+      "functionality": "exports",
+      "description": "Logging module re-exports",
+      "filePath": "src/logging/mod.rs",
+      "lineNumbers": "1-6"
+    },
+    {
+      "functionality": "types",
+      "description": "REST API request and response structs",
+      "filePath": "src/models/api_types.rs",
+      "lineNumbers": "1-5"
+    },
+    {
+      "functionality": "types > request",
+      "description": "Start a new process",
+      "filePath": "src/models/api_types.rs",
+      "lineNumbers": "6-22"
+    },
+    {
+      "functionality": "types > request",
+      "description": "Load an ecosystem config file",
+      "filePath": "src/models/api_types.rs",
+      "lineNumbers": "23-28"
+    },
+    {
+      "functionality": "types > response",
+      "description": "Generic operation response",
+      "filePath": "src/models/api_types.rs",
+      "lineNumbers": "29-35"
+    },
+    {
+      "functionality": "types > response",
+      "description": "Daemon health check",
+      "filePath": "src/models/api_types.rs",
+      "lineNumbers": "36-44"
+    },
+    {
+      "functionality": "types > response",
+      "description": "Log lines response",
+      "filePath": "src/models/api_types.rs",
+      "lineNumbers": "45-57"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "Size-based log rotation — 10MB limit, keep 5 rotated files",
+      "filePath": "src/logging/rotation.rs",
+      "lineNumbers": "1-6"
+    },
+    {
+      "functionality": "types",
+      "description": "Process lifecycle state machine",
+      "filePath": "src/models/process_status.rs",
+      "lineNumbers": "1-32"
+    },
+    {
+      "functionality": "databaseoperations",
+      "description": "Daemon shared state — process registry with disk persistence",
+      "filePath": "src/daemon/state.rs",
+      "lineNumbers": "1-12"
+    },
+    {
+      "functionality": "databaseoperations",
+      "description": "Serialize current process list to JSON file",
+      "filePath": "src/daemon/state.rs",
+      "lineNumbers": "44-69"
+    },
+    {
+      "functionality": "databaseoperations",
+      "description": "Load persisted state from disk",
+      "filePath": "src/daemon/state.rs",
+      "lineNumbers": "70-77"
+    },
+    {
+      "functionality": "databaseoperations",
+      "description": "Restore previously saved processes",
+      "filePath": "src/daemon/state.rs",
+      "lineNumbers": "78-87"
+    },
+    {
+      "functionality": "exports",
+      "description": "API routes module re-exports",
+      "filePath": "src/api/routes/mod.rs",
+      "lineNumbers": "1-7"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "Rolling file writer — persists log lines to disk and subscribes to broadcast",
+      "filePath": "src/logging/writer.rs",
+      "lineNumbers": "1-28"
+    },
+    {
+      "functionality": "exports",
+      "description": "Daemon module re-exports",
+      "filePath": "src/daemon/mod.rs",
+      "lineNumbers": "1-11"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "File system watcher — restarts process on file changes",
+      "filePath": "src/process/watcher.rs",
+      "lineNumbers": "1-15"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "Auto-restart logic with exponential backoff",
+      "filePath": "src/process/restarter.rs",
+      "lineNumbers": "1-7"
+    },
+    {
+      "functionality": "exports",
+      "description": "Process management module re-exports",
+      "filePath": "src/process/mod.rs",
+      "lineNumbers": "1-8"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "Managed process instance — holds full lifecycle state",
+      "filePath": "src/process/instance.rs",
+      "lineNumbers": "1-10"
+    },
+    {
+      "functionality": "configuration",
+      "description": "Binary entry point — routes to daemon mode or CLI dispatch",
+      "filePath": "src/main.rs",
+      "lineNumbers": "1-21"
+    },
+    {
+      "functionality": "businesslogic > daemon",
+      "description": "Hidden internal entry point for daemon process",
+      "filePath": "src/main.rs",
+      "lineNumbers": "22-35"
+    },
+    {
+      "functionality": "integrationtests",
+      "description": "Daemon start → spawn process → stop daemon lifecycle",
+      "filePath": "excluded/test/integration/daemon_lifecycle_test.rs",
+      "lineNumbers": "1-30"
+    },
+    {
+      "functionality": "integrationtests > lifecycle",
+      "description": "Start a process and verify it appears in the list",
+      "filePath": "excluded/test/integration/daemon_lifecycle_test.rs",
+      "lineNumbers": "31-42"
+    },
+    {
+      "functionality": "integrationtests > lifecycle",
+      "description": "Stop a running process",
+      "filePath": "excluded/test/integration/daemon_lifecycle_test.rs",
+      "lineNumbers": "43-52"
+    },
+    {
+      "functionality": "integrationtests > lifecycle",
+      "description": "Delete removes from registry",
+      "filePath": "excluded/test/integration/daemon_lifecycle_test.rs",
+      "lineNumbers": "57-69"
+    },
+    {
+      "functionality": "exports",
+      "description": "Client module re-exports",
+      "filePath": "src/client/mod.rs",
+      "lineNumbers": "1-4"
+    },
+    {
+      "functionality": "apiendpoints",
+      "description": "HTTP client wrapper — CLI to daemon communication",
+      "filePath": "src/client/daemon_client.rs",
+      "lineNumbers": "1-23"
+    },
+    {
+      "functionality": "apiendpoints > client",
+      "description": "Check if daemon is reachable",
+      "filePath": "src/client/daemon_client.rs",
+      "lineNumbers": "24-33"
+    },
+    {
+      "functionality": "apiendpoints > client",
+      "description": "GET request helper",
+      "filePath": "src/client/daemon_client.rs",
+      "lineNumbers": "34-41"
+    },
+    {
+      "functionality": "apiendpoints > client",
+      "description": "POST request helper",
+      "filePath": "src/client/daemon_client.rs",
+      "lineNumbers": "42-49"
+    },
+    {
+      "functionality": "apiendpoints > client",
+      "description": "DELETE request helper",
+      "filePath": "src/client/daemon_client.rs",
+      "lineNumbers": "50-57"
+    },
+    {
+      "functionality": "apiendpoints > client",
+      "description": "Stream SSE logs — calls callback for each line",
+      "filePath": "src/client/daemon_client.rs",
+      "lineNumbers": "58-103"
+    },
+    {
+      "functionality": "unittests",
+      "description": "Exponential backoff logic tests",
+      "filePath": "excluded/test/unit/restarter_test.rs",
+      "lineNumbers": "1-7"
+    },
+    {
+      "functionality": "unittests > restarter",
+      "description": "Backoff grows exponentially",
+      "filePath": "excluded/test/unit/restarter_test.rs",
+      "lineNumbers": "8-17"
+    },
+    {
+      "functionality": "edgecases",
+      "description": "Backoff is capped at 60 seconds",
+      "filePath": "excluded/test/unit/restarter_test.rs",
+      "lineNumbers": "18-25"
+    },
+    {
+      "functionality": "edgecases",
+      "description": "exponent capped at 8 (256x)",
+      "filePath": "excluded/test/unit/restarter_test.rs",
+      "lineNumbers": "26-29"
+    },
+    {
+      "functionality": "unittests",
+      "description": "TOML/JSON ecosystem config parsing tests",
+      "filePath": "excluded/test/unit/config_parse_test.rs",
+      "lineNumbers": "1-8"
+    },
+    {
+      "functionality": "unittests > config",
+      "description": "Parse minimal TOML",
+      "filePath": "excluded/test/unit/config_parse_test.rs",
+      "lineNumbers": "9-24"
+    },
+    {
+      "functionality": "unittests > config",
+      "description": "Parse full TOML with env vars",
+      "filePath": "excluded/test/unit/config_parse_test.rs",
+      "lineNumbers": "25-49"
+    },
+    {
+      "functionality": "unittests > config",
+      "description": "Parse JSON config",
+      "filePath": "excluded/test/unit/config_parse_test.rs",
+      "lineNumbers": "50-57"
+    },
+    {
+      "functionality": "edgecases",
+      "description": "Missing required fields should fail",
+      "filePath": "excluded/test/unit/config_parse_test.rs",
+      "lineNumbers": "58-67"
+    },
+    {
+      "functionality": "utilities",
+      "description": "Terminal table renderer for `alter list`",
+      "filePath": "src/utils/table.rs",
+      "lineNumbers": "1-11"
+    },
+    {
+      "functionality": "utilities",
+      "description": "PID file management — prevents duplicate daemon instances",
+      "filePath": "src/utils/pid.rs",
+      "lineNumbers": "1-41"
+    },
+    {
+      "functionality": "exports",
+      "description": "Utilities module re-exports",
+      "filePath": "src/utils/mod.rs",
+      "lineNumbers": "1-6"
+    },
+    {
+      "functionality": "utilities",
+      "description": "Duration, bytes, and uptime formatting helpers",
+      "filePath": "src/utils/format.rs",
+      "lineNumbers": "1-40"
+    },
+    {
+      "functionality": "exports",
+      "description": "CLI module re-exports",
+      "filePath": "src/cli/mod.rs",
+      "lineNumbers": "1-5"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "Embedded web dashboard served via rust-embed",
+      "filePath": "src/web/mod.rs",
+      "lineNumbers": "1-48"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "`alter describe` command handler",
+      "filePath": "src/cli/commands/describe.rs",
+      "lineNumbers": "1-30"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "`alter flush` command handler — delete log files",
+      "filePath": "src/cli/commands/flush.rs",
+      "lineNumbers": "1-38"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "`alter delete` command handler",
+      "filePath": "src/cli/commands/delete.rs",
+      "lineNumbers": "1-31"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "`alter list` command handler",
+      "filePath": "src/cli/commands/list.rs",
+      "lineNumbers": "1-29"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "`alter restart` command handler",
+      "filePath": "src/cli/commands/restart.rs",
+      "lineNumbers": "1-33"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "`alter reset` command handler — reset restart counter",
+      "filePath": "src/cli/commands/reset.rs",
+      "lineNumbers": "1-19"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "`alter logs` command handler",
+      "filePath": "src/cli/commands/logs.rs",
+      "lineNumbers": "1-55"
+    },
+    {
+      "functionality": "exports",
+      "description": "CLI command handlers re-exports",
+      "filePath": "src/cli/commands/mod.rs",
+      "lineNumbers": "1-16"
+    },
+    {
+      "functionality": "apiendpoints",
+      "description": "System / daemon management endpoints",
+      "filePath": "src/api/routes/system.rs",
+      "lineNumbers": "1-22"
+    },
+    {
+      "functionality": "apiendpoints > system",
+      "description": "GET /system/health",
+      "filePath": "src/api/routes/system.rs",
+      "lineNumbers": "23-34"
+    },
+    {
+      "functionality": "apiendpoints > system",
+      "description": "POST /system/save",
+      "filePath": "src/api/routes/system.rs",
+      "lineNumbers": "35-40"
+    },
+    {
+      "functionality": "apiendpoints > system",
+      "description": "POST /system/resurrect",
+      "filePath": "src/api/routes/system.rs",
+      "lineNumbers": "41-48"
+    },
+    {
+      "functionality": "apiendpoints > system",
+      "description": "POST /system/shutdown",
+      "filePath": "src/api/routes/system.rs",
+      "lineNumbers": "49-59"
+    },
+    {
+      "functionality": "apiendpoints",
+      "description": "Ecosystem config file loading endpoint",
+      "filePath": "src/api/routes/ecosystem.rs",
+      "lineNumbers": "1-16"
+    },
+    {
+      "functionality": "apiendpoints > ecosystem",
+      "description": "POST /ecosystem",
+      "filePath": "src/api/routes/ecosystem.rs",
+      "lineNumbers": "17-43"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "`alter stop` command handler",
+      "filePath": "src/cli/commands/stop.rs",
+      "lineNumbers": "1-32"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "`alter startup` / `alter unstartup` command handlers",
+      "filePath": "src/cli/commands/startup.rs",
+      "lineNumbers": "1"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "`alter start` command handler",
+      "filePath": "src/cli/commands/start.rs",
+      "lineNumbers": "1-10"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "`alter save` command handler",
+      "filePath": "src/cli/commands/save.rs",
+      "lineNumbers": "1-19"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "`alter resurrect` command handler",
+      "filePath": "src/cli/commands/resurrect.rs",
+      "lineNumbers": "1-20"
+    },
+    {
+      "functionality": "apiendpoints",
+      "description": "Standalone log management endpoints (flush)",
+      "filePath": "src/api/routes/logs.rs",
+      "lineNumbers": "1"
+    },
+    {
+      "functionality": "apiendpoints > logs",
+      "description": "DELETE /processes/:id/logs — delete log files",
+      "filePath": "src/api/routes/logs.rs",
+      "lineNumbers": "17-38"
+    },
+    {
+      "functionality": "configuration",
+      "description": "CLI argument structures using clap derive macros",
+      "filePath": "src/cli/args.rs",
+      "lineNumbers": "1-12"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "Spawn child process and pipe stdout/stderr to log infrastructure",
+      "filePath": "src/process/runner.rs",
+      "lineNumbers": "1-14"
+    },
+    {
+      "functionality": "businesslogic > windows",
+      "description": "npm/node/python etc. are .cmd batch scripts on Windows.",
+      "filePath": "src/process/runner.rs",
+      "lineNumbers": "31"
+    },
+    {
+      "functionality": "businesslogic > logging",
+      "description": "Stream stdout to broadcast + disk",
+      "filePath": "src/process/runner.rs",
+      "lineNumbers": "77-91"
+    },
+    {
+      "functionality": "businesslogic > logging",
+      "description": "Stream stderr to broadcast + disk",
+      "filePath": "src/process/runner.rs",
+      "lineNumbers": "92-107"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "Process manager — spawns, tracks, stops, and restarts all child processes",
+      "filePath": "src/process/manager.rs",
+      "lineNumbers": "1-33"
+    },
+    {
+      "functionality": "businesslogic > restarter",
+      "description": "Background task that handles restart events",
+      "filePath": "src/process/manager.rs",
+      "lineNumbers": "34-39"
+    },
+    {
+      "functionality": "businesslogic > lifecycle",
+      "description": "Start a new process from config",
+      "filePath": "src/process/manager.rs",
+      "lineNumbers": "42-55"
+    },
+    {
+      "functionality": "businesslogic > lifecycle",
+      "description": "Stop a running process",
+      "filePath": "src/process/manager.rs",
+      "lineNumbers": "56-77"
+    },
+    {
+      "functionality": "businesslogic > lifecycle",
+      "description": "Restart a process (stop then start)",
+      "filePath": "src/process/manager.rs",
+      "lineNumbers": "78-93"
+    },
+    {
+      "functionality": "businesslogic > lifecycle",
+      "description": "Delete a process (stop + remove from registry)",
+      "filePath": "src/process/manager.rs",
+      "lineNumbers": "94-107"
+    },
+    {
+      "functionality": "businesslogic > lifecycle",
+      "description": "Update config for a process (stop → patch config → restart if was running)",
+      "filePath": "src/process/manager.rs",
+      "lineNumbers": "108-134"
+    },
+    {
+      "functionality": "businesslogic > lifecycle",
+      "description": "Reset restart counter",
+      "filePath": "src/process/manager.rs",
+      "lineNumbers": "135-142"
+    },
+    {
+      "functionality": "businesslogic > query",
+      "description": "List all process infos",
+      "filePath": "src/process/manager.rs",
+      "lineNumbers": "143-153"
+    },
+    {
+      "functionality": "businesslogic > query",
+      "description": "Get a single process info by id",
+      "filePath": "src/process/manager.rs",
+      "lineNumbers": "154-160"
+    },
+    {
+      "functionality": "businesslogic > query",
+      "description": "Subscribe to a process's log broadcast channel",
+      "filePath": "src/process/manager.rs",
+      "lineNumbers": "161-167"
+    },
+    {
+      "functionality": "businesslogic > utilities",
+      "description": "Resolve process ID from name or UUID string",
+      "filePath": "src/process/manager.rs",
+      "lineNumbers": "168-183"
+    },
+    {
+      "functionality": "businesslogic > internal",
+      "description": "Core spawn logic shared by start/restart",
+      "filePath": "src/process/manager.rs",
+      "lineNumbers": "184-193"
+    },
+    {
+      "functionality": "businesslogic > internal",
+      "description": "Background restart event loop",
+      "filePath": "src/process/manager.rs",
+      "lineNumbers": "266-280"
+    },
+    {
+      "functionality": "utilities",
+      "description": "Platform-aware process tree kill",
+      "filePath": "src/process/manager.rs",
+      "lineNumbers": "387"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "OS signal handling — graceful daemon shutdown on SIGTERM/SIGINT",
+      "filePath": "src/daemon/signals.rs",
+      "lineNumbers": "1-20"
+    },
+    {
+      "functionality": "apiendpoints",
+      "description": "Process CRUD endpoints",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "1-30"
+    },
+    {
+      "functionality": "apiendpoints > process",
+      "description": "GET /processes",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "31-36"
+    },
+    {
+      "functionality": "apiendpoints > process",
+      "description": "POST /processes",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "37-72"
+    },
+    {
+      "functionality": "apiendpoints > process",
+      "description": "GET /processes/:id",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "73-82"
+    },
+    {
+      "functionality": "apiendpoints > process",
+      "description": "DELETE /processes/:id",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "83-93"
+    },
+    {
+      "functionality": "apiendpoints > process",
+      "description": "POST /processes/:id/stop",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "94-104"
+    },
+    {
+      "functionality": "apiendpoints > process",
+      "description": "POST /processes/:id/start",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "105-115"
+    },
+    {
+      "functionality": "apiendpoints > process",
+      "description": "POST /processes/:id/restart",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "116-126"
+    },
+    {
+      "functionality": "apiendpoints > process",
+      "description": "POST /processes/:id/reset",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "127-136"
+    },
+    {
+      "functionality": "apiendpoints > logs",
+      "description": "GET /processes/:id/logs",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "137-160"
+    },
+    {
+      "functionality": "apiendpoints > logs",
+      "description": "GET /processes/:id/logs/stream (SSE)",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "161-176"
+    },
+    {
+      "functionality": "apiendpoints > process",
+      "description": "PATCH /processes/:id — update config and apply",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "204-211"
+    },
+    {
+      "functionality": "apiendpoints",
+      "description": "Axum HTTP server — route registration and shared state injection",
+      "filePath": "src/daemon/server.rs",
+      "lineNumbers": "1-31"
+    },
+    {
+      "functionality": "configuration",
+      "description": "Bind with SO_REUSEADDR so we can reclaim zombie/TIME_WAIT ports instantly",
+      "filePath": "src/daemon/server.rs",
+      "lineNumbers": "32-43"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "`alter daemon` command handler — start/stop/status daemon",
+      "filePath": "src/cli/commands/daemon.rs",
+      "lineNumbers": "1-15"
+    },
+    {
+      "functionality": "businesslogic > daemon",
+      "description": "Spawn daemon as detached background process and wait for it to bind",
+      "filePath": "src/cli/commands/daemon.rs",
+      "lineNumbers": "16-17"
+    }
+  ],
+  "js": [
+    {
+      "functionality": "businesslogic",
+      "description": "Dashboard JS — fetches process data and renders the UI",
+      "filePath": "src/web/assets/app.js",
+      "lineNumbers": "1-8"
+    },
+    {
+      "functionality": "businesslogic > init",
+      "description": "Page load",
+      "filePath": "src/web/assets/app.js",
+      "lineNumbers": "9-15"
+    },
+    {
+      "functionality": "businesslogic > cleanup",
+      "description": "Close SSE streams when page hides or unloads",
+      "filePath": "src/web/assets/app.js",
+      "lineNumbers": "16-28"
+    },
+    {
+      "functionality": "businesslogic > data",
+      "description": "Fetch and render process list",
+      "filePath": "src/web/assets/app.js",
+      "lineNumbers": "29-38"
+    },
+    {
+      "functionality": "businesslogic > data",
+      "description": "Fetch daemon health info",
+      "filePath": "src/web/assets/app.js",
+      "lineNumbers": "45-56"
+    },
+    {
+      "functionality": "businesslogic > render",
+      "description": "Build the process table rows",
+      "filePath": "src/web/assets/app.js",
+      "lineNumbers": "57-83"
+    },
+    {
+      "functionality": "businesslogic > render",
+      "description": "Build sidebar process list",
+      "filePath": "src/web/assets/app.js",
+      "lineNumbers": "84-98"
+    },
+    {
+      "functionality": "businesslogic > navigation",
+      "description": "Scroll to and highlight a process row in the table",
+      "filePath": "src/web/assets/app.js",
+      "lineNumbers": "110-112"
+    },
+    {
+      "functionality": "businesslogic > actions",
+      "description": "Process control buttons",
+      "filePath": "src/web/assets/app.js",
+      "lineNumbers": "126-148"
+    },
+    {
+      "functionality": "businesslogic > navigation",
+      "description": "Switch between sidebar views",
+      "filePath": "src/web/assets/app.js",
+      "lineNumbers": "149-153"
+    },
+    {
+      "functionality": "businesslogic > actions",
+      "description": "Open edit view pre-filled with process config",
+      "filePath": "src/web/assets/app.js",
+      "lineNumbers": "169-183"
+    },
+    {
+      "functionality": "businesslogic > actions",
+      "description": "Submit edited process config via PATCH",
+      "filePath": "src/web/assets/app.js",
+      "lineNumbers": "196-246"
+    },
+    {
+      "functionality": "businesslogic > actions",
+      "description": "Submit start-process form",
+      "filePath": "src/web/assets/app.js",
+      "lineNumbers": "249-260"
+    },
+    {
+      "functionality": "businesslogic > logs",
+      "description": "Open log panel and stream logs via SSE",
+      "filePath": "src/web/assets/app.js",
+      "lineNumbers": "303-312"
+    },
+    {
+      "functionality": "businesslogic > processdetail",
+      "description": "Full-screen process detail view with live logs",
+      "filePath": "src/web/assets/app.js",
+      "lineNumbers": "354-355"
+    },
+    {
+      "functionality": "businesslogic > processdetail",
+      "description": "Toolbar action buttons",
+      "filePath": "src/web/assets/app.js",
+      "lineNumbers": "422-456"
+    },
+    {
+      "functionality": "businesslogic > autorefresh",
+      "description": "Periodic process list refresh",
+      "filePath": "src/web/assets/app.js",
+      "lineNumbers": "457-470"
+    },
+    {
+      "functionality": "utilities",
+      "description": "Helpers",
+      "filePath": "src/web/assets/app.js",
+      "lineNumbers": "471-482"
+    }
+  ],
+  "css": [
+    {
+      "functionality": "configuration",
+      "description": "Dashboard styles",
+      "filePath": "src/web/assets/style.css",
+      "lineNumbers": "1-15"
+    },
+    {
+      "functionality": "layout",
+      "description": "Sidebar + content shell",
+      "filePath": "src/web/assets/style.css",
+      "lineNumbers": "28-32"
+    },
+    {
+      "functionality": "layout > processdetail",
+      "description": "Full-screen process detail view",
+      "filePath": "src/web/assets/style.css",
+      "lineNumbers": "345-352"
+    }
+  ]
+}

@@ -1,0 +1,403 @@
+{
+  "version": "1.3.0",
+  "totalFunctionalities": 40,
+  "functionalities": {
+    "apiendpoints": {
+      "level": 1,
+      "parent": null,
+      "children": [
+        "apiendpoints > client",
+        "apiendpoints > ecosystem",
+        "apiendpoints > logs",
+        "apiendpoints > process",
+        "apiendpoints > system"
+      ],
+      "groupCount": 8,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "configuration": {
+      "level": 1,
+      "parent": null,
+      "children": [],
+      "groupCount": 7,
+      "fileTypes": [
+        "css",
+        "rs"
+      ]
+    },
+    "exports": {
+      "level": 1,
+      "parent": null,
+      "children": [],
+      "groupCount": 10,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "errorhandling": {
+      "level": 1,
+      "parent": null,
+      "children": [],
+      "groupCount": 1,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "businesslogic": {
+      "level": 1,
+      "parent": null,
+      "children": [
+        "businesslogic > actions",
+        "businesslogic > autorefresh",
+        "businesslogic > cleanup",
+        "businesslogic > daemon",
+        "businesslogic > data",
+        "businesslogic > init",
+        "businesslogic > internal",
+        "businesslogic > lifecycle",
+        "businesslogic > logging",
+        "businesslogic > logs",
+        "businesslogic > navigation",
+        "businesslogic > processdetail",
+        "businesslogic > query",
+        "businesslogic > render",
+        "businesslogic > restarter",
+        "businesslogic > utilities",
+        "businesslogic > windows"
+      ],
+      "groupCount": 24,
+      "fileTypes": [
+        "js",
+        "rs"
+      ]
+    },
+    "types": {
+      "level": 1,
+      "parent": null,
+      "children": [
+        "types > request",
+        "types > response"
+      ],
+      "groupCount": 3,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "types > request": {
+      "level": 2,
+      "parent": "types",
+      "children": [],
+      "groupCount": 2,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "types > response": {
+      "level": 2,
+      "parent": "types",
+      "children": [],
+      "groupCount": 3,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "databaseoperations": {
+      "level": 1,
+      "parent": null,
+      "children": [],
+      "groupCount": 4,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "businesslogic > daemon": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 2,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "integrationtests": {
+      "level": 1,
+      "parent": null,
+      "children": [
+        "integrationtests > lifecycle"
+      ],
+      "groupCount": 1,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "integrationtests > lifecycle": {
+      "level": 2,
+      "parent": "integrationtests",
+      "children": [],
+      "groupCount": 3,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "apiendpoints > client": {
+      "level": 2,
+      "parent": "apiendpoints",
+      "children": [],
+      "groupCount": 5,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "unittests": {
+      "level": 1,
+      "parent": null,
+      "children": [
+        "unittests > config",
+        "unittests > restarter"
+      ],
+      "groupCount": 2,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "unittests > restarter": {
+      "level": 2,
+      "parent": "unittests",
+      "children": [],
+      "groupCount": 1,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "edgecases": {
+      "level": 1,
+      "parent": null,
+      "children": [],
+      "groupCount": 3,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "unittests > config": {
+      "level": 2,
+      "parent": "unittests",
+      "children": [],
+      "groupCount": 3,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "utilities": {
+      "level": 1,
+      "parent": null,
+      "children": [],
+      "groupCount": 5,
+      "fileTypes": [
+        "js",
+        "rs"
+      ]
+    },
+    "apiendpoints > system": {
+      "level": 2,
+      "parent": "apiendpoints",
+      "children": [],
+      "groupCount": 4,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "apiendpoints > ecosystem": {
+      "level": 2,
+      "parent": "apiendpoints",
+      "children": [],
+      "groupCount": 1,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "apiendpoints > logs": {
+      "level": 2,
+      "parent": "apiendpoints",
+      "children": [],
+      "groupCount": 3,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "businesslogic > windows": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 1,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "businesslogic > logging": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 2,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "businesslogic > restarter": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 1,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "businesslogic > lifecycle": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 6,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "businesslogic > query": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 3,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "businesslogic > utilities": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 1,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "businesslogic > internal": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 2,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "apiendpoints > process": {
+      "level": 2,
+      "parent": "apiendpoints",
+      "children": [],
+      "groupCount": 9,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "businesslogic > init": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 1,
+      "fileTypes": [
+        "js"
+      ]
+    },
+    "businesslogic > cleanup": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 1,
+      "fileTypes": [
+        "js"
+      ]
+    },
+    "businesslogic > data": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 2,
+      "fileTypes": [
+        "js"
+      ]
+    },
+    "businesslogic > render": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 2,
+      "fileTypes": [
+        "js"
+      ]
+    },
+    "businesslogic > navigation": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 2,
+      "fileTypes": [
+        "js"
+      ]
+    },
+    "businesslogic > actions": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 4,
+      "fileTypes": [
+        "js"
+      ]
+    },
+    "businesslogic > logs": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 1,
+      "fileTypes": [
+        "js"
+      ]
+    },
+    "businesslogic > processdetail": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 2,
+      "fileTypes": [
+        "js"
+      ]
+    },
+    "businesslogic > autorefresh": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 1,
+      "fileTypes": [
+        "js"
+      ]
+    },
+    "layout": {
+      "level": 1,
+      "parent": null,
+      "children": [
+        "layout > processdetail"
+      ],
+      "groupCount": 1,
+      "fileTypes": [
+        "css"
+      ]
+    },
+    "layout > processdetail": {
+      "level": 2,
+      "parent": "layout",
+      "children": [],
+      "groupCount": 1,
+      "fileTypes": [
+        "css"
+      ]
+    }
+  }
+}
