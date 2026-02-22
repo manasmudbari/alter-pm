@@ -1,8 +1,8 @@
-// @group BusinessLogic : Embedded web dashboard served via rust-embed
+// @group BusinessLogic : Embedded React SPA served via rust-embed with SPA fallback
 
 use axum::{
     body::Body,
-    http::{header, Response, StatusCode},
+    http::{header, Response, StatusCode, Uri},
     response::IntoResponse,
     routing::get,
     Router,
@@ -10,38 +10,37 @@ use axum::{
 use rust_embed::Embed;
 
 #[derive(Embed)]
-#[folder = "src/web/assets/"]
+#[folder = "web-ui/dist/"]
 struct Assets;
 
 pub fn router() -> Router {
-    Router::new()
-        .route("/", get(serve_index))
-        .route("/app.js", get(serve_app_js))
-        .route("/style.css", get(serve_style_css))
+    Router::new().fallback(get(serve_spa))
 }
 
-async fn serve_index() -> impl IntoResponse {
-    serve_asset("index.html", "text/html; charset=utf-8")
-}
+async fn serve_spa(uri: Uri) -> impl IntoResponse {
+    let path = uri.path().trim_start_matches('/');
+    let path = if path.is_empty() { "index.html" } else { path };
 
-async fn serve_app_js() -> impl IntoResponse {
-    serve_asset("app.js", "application/javascript; charset=utf-8")
-}
-
-async fn serve_style_css() -> impl IntoResponse {
-    serve_asset("style.css", "text/css; charset=utf-8")
-}
-
-fn serve_asset(name: &str, content_type: &'static str) -> Response<Body> {
-    match Assets::get(name) {
-        Some(asset) => Response::builder()
-            .status(StatusCode::OK)
-            .header(header::CONTENT_TYPE, content_type)
-            .body(Body::from(asset.data.to_vec()))
-            .unwrap(),
-        None => Response::builder()
-            .status(StatusCode::NOT_FOUND)
-            .body(Body::from("not found"))
-            .unwrap(),
+    match Assets::get(path) {
+        Some(asset) => {
+            let mime = mime_guess::from_path(path).first_or_octet_stream();
+            Response::builder()
+                .status(StatusCode::OK)
+                .header(header::CONTENT_TYPE, mime.as_ref())
+                .body(Body::from(asset.data.to_vec()))
+                .unwrap()
+        }
+        // SPA fallback — serve index.html for client-side routes
+        None => match Assets::get("index.html") {
+            Some(asset) => Response::builder()
+                .status(StatusCode::OK)
+                .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
+                .body(Body::from(asset.data.to_vec()))
+                .unwrap(),
+            None => Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body(Body::from("not found"))
+                .unwrap(),
+        },
     }
 }

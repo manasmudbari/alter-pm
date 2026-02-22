@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: hsl(222 20% 8%);
+  --color-foreground: hsl(220 15% 90%);
+  --color-card: hsl(222 18% 12%);
+  --color-card-foreground: hsl(220 15% 90%);
+  --color-muted: hsl(222 16% 16%);
+  --color-muted-foreground: hsl(220 10% 50%);
+  --color-border: hsl(222 14% 20%);
+  --color-input: hsl(222 14% 20%);
+  --color-primary: hsl(213 89% 62%);
+  --color-primary-foreground: hsl(0 0% 100%);
+  --color-secondary: hsl(222 16% 18%);
+  --color-secondary-foreground: hsl(220 15% 80%);
+  --color-accent: hsl(222 16% 20%);
+  --color-accent-foreground: hsl(220 15% 90%);
+  --color-destructive: hsl(0 72% 65%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+  --color-popover: hsl(222 18% 12%);
+  --color-popover-foreground: hsl(220 15% 90%);
+  --color-ring: hsl(213 89% 62%);
+
+  /* Status colors */
+  --color-status-running: #3ddc84;
+  --color-status-watching: #80deea;
+  --color-status-stopped: #ffd54f;
+  --color-status-crashed: #f06292;
+  --color-status-errored: #ce93d8;
+  --color-status-starting: #80deea;
+  --color-status-stopping: #ffd54f;
+  --color-status-sleeping: #4f9cf9;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; border-color: var(--color-border); }
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root { height: 100vh; }
+
+/* Status dot colors */
+.status-running  { color: var(--color-status-running); }
+.status-watching { color: var(--color-status-watching); }
+.status-stopped  { color: var(--color-status-stopped); }
+.status-crashed  { color: var(--color-status-crashed); }
+.status-errored  { color: var(--color-status-errored); }
+.status-starting { color: var(--color-status-starting); }
+.status-stopping { color: var(--color-status-stopping); }
+.status-sleeping { color: var(--color-status-sleeping); }
+
+/* Log viewer monospace */
+.log-output {
+  font-family: 'Cascadia Code', 'Consolas', 'Fira Code', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.log-line-err { color: #f06292; }
+.log-line-out { color: #c9d1e0; }
+
+/* Row highlight */
+@keyframes rowHighlight {
+  0%   { background: rgba(79,156,249,0.18); }
+  100% { background: transparent; }
+}
+.row-highlight { animation: rowHighlight 1.5s ease-out forwards; }
+
+/* Thin scrollbars */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }

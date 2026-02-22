@@ -6,3 +6,7 @@ Cargo.lock
 
 excluded/
 .claude
+
+# Web UI build artifacts
+web-ui/dist/
+web-ui/node_modules/
