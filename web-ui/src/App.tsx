@@ -79,18 +79,20 @@ function Layout() {
             <span style={{ fontWeight: 700, fontSize: 18, letterSpacing: '-0.5px', color: 'var(--color-primary)' }}>alter</span>
             <span style={{ fontSize: 11, color: 'var(--color-muted-foreground)', fontWeight: 500 }}>pm</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-            <span style={{
-              fontSize: 11, fontWeight: 600,
+          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-end', gap: 2 }}>
+              <span style={{ fontSize: 10, color: 'var(--color-muted-foreground)' }}>
+            {health && (
+               <>
+                v{health.version} · {formatUptime(health.uptime_secs)}
+               </> 
+              )}
+              </span>
+            <span className='px-2' style={{
+              fontSize: 16, fontWeight: 600,
               color: connected ? 'var(--color-status-running)' : 'var(--color-status-crashed)',
             }}>
-              ● {connected ? 'connected' : 'disconnected'}
+              ●
             </span>
-            {health && (
-              <span style={{ fontSize: 10, color: 'var(--color-muted-foreground)' }}>
-                v{health.version} · {formatUptime(health.uptime_secs)}
-              </span>
-            )}
           </div>
         </div>
 

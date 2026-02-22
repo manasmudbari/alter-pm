@@ -113,7 +113,7 @@ export default function SettingsPage({ settings, onUpdate, onReset }: Props) {
   }
 
   return (
-    <div style={{ padding: '20px 28px', maxWidth: 680, margin: '0 auto' }}>
+    <div style={{ padding: '20px 28px' }}>
 
       {/* Header */}
       <div style={{ marginBottom: 24, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
