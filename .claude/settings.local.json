@@ -43,7 +43,25 @@
       "Bash(ALTER_PORT=3999 alter daemon start:*)",
       "Bash(ALTER_PORT=3999 alter list:*)",
       "Bash(reg query \"HKCU\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\")",
-      "Bash(alter list:*)"
+      "Bash(alter list:*)",
+      "Bash(cd /d D:TopSecretalter-pm2)",
+      "Bash(where:*)",
+      "Bash(\"C:\\\\Users\\\\Chand\\\\.cargo\\\\bin\\\\cargo.exe\" build:*)",
+      "Bash(C:UsersChand.cargobincargo.exe build)",
+      "Bash(cmd.exe /c \"cd /d D:\\\\TopSecret\\\\alter-pm2 && C:\\\\Users\\\\Chand\\\\.cargo\\\\bin\\\\cargo.exe build 2>&1\")",
+      "Bash(C:\\\\Users\\\\Chand\\\\.cargo\\\\bin\\\\cargo.exe build:*)",
+      "Bash(cmd.exe /c \"C:\\\\Users\\\\Chand\\\\.cargo\\\\bin\\\\cargo.exe build --release --manifest-path \\\\\"D:\\\\TopSecret\\\\alter-pm2\\\\Cargo.toml\\\\\"\":*)",
+      "Bash(cmd.exe /c \"C:\\\\Users\\\\Chand\\\\.cargo\\\\bin\\\\cargo.exe build --release --manifest-path \\\\\"D:\\\\TopSecret\\\\alter-pm2\\\\Cargo.toml\\\\\" 2>&1\":*)",
+      "Bash(cmd.exe /c \"dir \"\"D:\\\\TopSecret\\\\alter-pm2\\\\target\\\\release\\\\alter.exe\"\" 2>&1\")",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\Chand\\\\AppData\\\\Local\\\\Temp\\\\start_daemon.ps1\")",
+      "Bash(powershell.exe -NoProfile -ExecutionPolicy Bypass -File -:*)",
+      "Bash(cmd.exe /c \"mkdir C:\\\\Temp 2>nul & echo done\")",
+      "Bash(cmd.exe /c \"mkdir C:\\\\Temp 2>nul\")",
+      "Bash(echo:*)",
+      "Bash(powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"New-Item -ItemType Directory -Force -Path ''C:\\\\Temp'' | Out-Null; Write-Host ''Temp created''\")",
+      "Bash(powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"Remove-Item -Path ''C:\\\\Temp\\\\reg_procs.ps1'' -ErrorAction SilentlyContinue; $lines = @\\(\\); $lines += ''$processes = @\\(''; $lines += ''    @{ name=''''ascend-ui''''; cwd=''''D:\\\\Projects\\\\Outernet\\\\2.0\\\\ascend-ui'''' },''; $lines += ''    @{ name=''''asset-manager''''; cwd=''''D:\\\\Projects\\\\Outernet\\\\2.0\\\\asset-manager'''' },''; $lines += ''    @{ name=''''booking-manager''''; cwd=''''D:\\\\Projects\\\\Outernet\\\\2.0\\\\booking-manager'''' },''; $lines += ''    @{ name=''''core-api''''; cwd=''''D:\\\\Projects\\\\Outernet\\\\2.0\\\\core-api'''' },''; $lines += ''    @{ name=''''media-player''''; cwd=''''D:\\\\Projects\\\\Outernet\\\\2.0\\\\media-player'''' },''; $lines += ''    @{ name=''''playout-manager''''; cwd=''''D:\\\\Projects\\\\Outernet\\\\2.0\\\\playout-manager'''' },''; $lines += ''    @{ name=''''schedule-manager''''; cwd=''''D:\\\\Projects\\\\Outernet\\\\2.0\\\\schedule-manager'''' },''; $lines += ''    @{ name=''''scheduling-manager''''; cwd=''''D:\\\\Projects\\\\Outernet\\\\2.0\\\\scheduling-manager'''' },''; $lines += ''    @{ name=''''screen-manager''''; cwd=''''D:\\\\Projects\\\\Outernet\\\\2.0\\\\screen-manager'''' },''; $lines += ''    @{ name=''''websocket-server''''; cwd=''''D:\\\\Projects\\\\Outernet\\\\2.0\\\\websocket-server'''' }''; $lines += ''\\)''; $lines += ''foreach \\($p in $processes\\) {''; $lines += ''    Write-Host \\(''''---'''' + $p.name\\)''; $lines += ''    $body = @{ script=''''npm''''; args=@\\(''''run'''',''''dev''''\\); name=$p.name; cwd=$p.cwd; autorestart=$false } | ConvertTo-Json -Compress''; $lines += ''    Write-Host $body''; $lines += ''    try { $r=Invoke-RestMethod -Uri ''''http://127.0.0.1:2999/api/v1/processes'''' -Method POST -ContentType ''''application/json'''' -Body $body; $r|ConvertTo-Json -Depth 5 }''; $lines += ''    catch { Write-Host \\(''''ERR:''''+$_.Exception.Message\\); if\\($_.Exception.Response\\){[System.IO.StreamReader]::new\\($_.Exception.Response.GetResponseStream\\(\\)\\).ReadToEnd\\(\\)|Write-Host} }''; $lines += ''    Write-Host ''''''''''; $lines += ''}''; $lines | Set-Content ''C:\\\\Temp\\\\reg_procs.ps1''; Write-Host ''Written''\")",
+      "Bash(powershell.exe:*)",
+      "Bash(printf '%s\\\\r\\\\n' '$r = Invoke-RestMethod http://127.0.0.1:2999/api/v1/processes' '$r.processes | Select-Object name, status, cwd | Format-Table -AutoSize')"
     ]
   }
 }

@@ -1,6 +1,6 @@
 {
   "version": "1.3.0",
-  "totalFunctionalities": 40,
+  "totalFunctionalities": 44,
   "functionalities": {
     "apiendpoints": {
       "level": 1,
@@ -45,34 +45,6 @@
         "rs"
       ]
     },
-    "businesslogic": {
-      "level": 1,
-      "parent": null,
-      "children": [
-        "businesslogic > actions",
-        "businesslogic > autorefresh",
-        "businesslogic > cleanup",
-        "businesslogic > daemon",
-        "businesslogic > data",
-        "businesslogic > init",
-        "businesslogic > internal",
-        "businesslogic > lifecycle",
-        "businesslogic > logging",
-        "businesslogic > logs",
-        "businesslogic > navigation",
-        "businesslogic > processdetail",
-        "businesslogic > query",
-        "businesslogic > render",
-        "businesslogic > restarter",
-        "businesslogic > utilities",
-        "businesslogic > windows"
-      ],
-      "groupCount": 24,
-      "fileTypes": [
-        "js",
-        "rs"
-      ]
-    },
     "types": {
       "level": 1,
       "parent": null,
@@ -103,12 +75,33 @@
         "rs"
       ]
     },
-    "databaseoperations": {
+    "businesslogic": {
       "level": 1,
       "parent": null,
-      "children": [],
-      "groupCount": 4,
+      "children": [
+        "businesslogic > actions",
+        "businesslogic > autorefresh",
+        "businesslogic > cleanup",
+        "businesslogic > daemon",
+        "businesslogic > dailyrotation",
+        "businesslogic > data",
+        "businesslogic > datedlogs",
+        "businesslogic > init",
+        "businesslogic > internal",
+        "businesslogic > lifecycle",
+        "businesslogic > logging",
+        "businesslogic > logs",
+        "businesslogic > navigation",
+        "businesslogic > processdetail",
+        "businesslogic > query",
+        "businesslogic > render",
+        "businesslogic > restarter",
+        "businesslogic > utilities",
+        "businesslogic > windows"
+      ],
+      "groupCount": 26,
       "fileTypes": [
+        "js",
         "rs"
       ]
     },
@@ -193,7 +186,7 @@
       "level": 1,
       "parent": null,
       "children": [],
-      "groupCount": 5,
+      "groupCount": 7,
       "fileTypes": [
         "js",
         "rs"
@@ -221,7 +214,7 @@
       "level": 2,
       "parent": "apiendpoints",
       "children": [],
-      "groupCount": 3,
+      "groupCount": 4,
       "fileTypes": [
         "rs"
       ]
@@ -244,6 +237,34 @@
         "rs"
       ]
     },
+    "businesslogic > dailyrotation": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 3,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "businesslogic > datedlogs": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 6,
+      "fileTypes": [
+        "js",
+        "rs"
+      ]
+    },
+    "apiendpoints > process": {
+      "level": 2,
+      "parent": "apiendpoints",
+      "children": [],
+      "groupCount": 9,
+      "fileTypes": [
+        "rs"
+      ]
+    },
     "businesslogic > restarter": {
       "level": 2,
       "parent": "businesslogic",
@@ -257,7 +278,7 @@
       "level": 2,
       "parent": "businesslogic",
       "children": [],
-      "groupCount": 6,
+      "groupCount": 7,
       "fileTypes": [
         "rs"
       ]
@@ -289,11 +310,11 @@
         "rs"
       ]
     },
-    "apiendpoints > process": {
-      "level": 2,
-      "parent": "apiendpoints",
+    "databaseoperations": {
+      "level": 1,
+      "parent": null,
       "children": [],
-      "groupCount": 9,
+      "groupCount": 4,
       "fileTypes": [
         "rs"
       ]
@@ -356,7 +377,7 @@
       "level": 2,
       "parent": "businesslogic",
       "children": [],
-      "groupCount": 1,
+      "groupCount": 2,
       "fileTypes": [
         "js"
       ]
@@ -398,6 +419,24 @@
       "fileTypes": [
         "css"
       ]
+    },
+    "styles > datedlogs": {
+      "level": 2,
+      "parent": "styles",
+      "children": [],
+      "groupCount": 1,
+      "fileTypes": [
+        "css"
+      ]
+    },
+    "styles": {
+      "level": 1,
+      "parent": null,
+      "children": [
+        "styles > datedlogs"
+      ],
+      "groupCount": 0,
+      "fileTypes": []
     }
   }
 }
