@@ -804,109 +804,109 @@
       "functionality": "businesslogic > render",
       "description": "Build the process table rows",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "61-87"
+      "lineNumbers": "61-89"
     },
     {
       "functionality": "businesslogic > render",
       "description": "Build sidebar process list",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "88-102"
+      "lineNumbers": "90-104"
     },
     {
       "functionality": "businesslogic > navigation",
       "description": "Scroll to and highlight a process row in the table",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "114-116"
+      "lineNumbers": "116-118"
     },
     {
       "functionality": "businesslogic > actions",
       "description": "Process control buttons",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "130-152"
+      "lineNumbers": "132-159"
     },
     {
       "functionality": "businesslogic > navigation",
       "description": "Switch between sidebar views",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "153-157"
+      "lineNumbers": "160-164"
     },
     {
       "functionality": "businesslogic > actions",
       "description": "Open edit view pre-filled with process config",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "173-187"
+      "lineNumbers": "180-194"
     },
     {
       "functionality": "businesslogic > actions",
       "description": "Submit edited process config via PATCH",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "200-250"
+      "lineNumbers": "207-257"
     },
     {
       "functionality": "businesslogic > actions",
       "description": "Submit start-process form",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "253-264"
+      "lineNumbers": "260-271"
     },
     {
       "functionality": "businesslogic > logs",
       "description": "Open log panel and stream logs via SSE",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "307-316"
+      "lineNumbers": "314-323"
     },
     {
       "functionality": "businesslogic > datedlogs",
       "description": "Fetch available log dates and render the nav bar",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "330-341"
+      "lineNumbers": "337-348"
     },
     {
       "functionality": "businesslogic > datedlogs",
       "description": "Render the ← Today → navigation bar for historical logs",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "342-355"
+      "lineNumbers": "349-362"
     },
     {
       "functionality": "businesslogic > datedlogs",
       "description": "Navigate one step older/newer in the rotated log list",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "356-363"
+      "lineNumbers": "363-370"
     },
     {
       "functionality": "businesslogic > datedlogs",
       "description": "Fetch historical (or today's) log lines from the API",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "377-390"
+      "lineNumbers": "384-397"
     },
     {
       "functionality": "businesslogic > logs",
       "description": "Start live SSE stream and append lines to outputId",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "391-426"
+      "lineNumbers": "398-433"
     },
     {
       "functionality": "businesslogic > processdetail",
       "description": "Full-screen process detail view with live logs",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "427-428"
+      "lineNumbers": "434-435"
     },
     {
       "functionality": "businesslogic > processdetail",
       "description": "Toolbar action buttons",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "480-514"
+      "lineNumbers": "492-532"
     },
     {
       "functionality": "businesslogic > autorefresh",
       "description": "Periodic process list refresh",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "515-528"
+      "lineNumbers": "533-546"
     },
     {
       "functionality": "utilities",
       "description": "Helpers",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "529-540"
+      "lineNumbers": "547-558"
     }
   ],
   "css": [
