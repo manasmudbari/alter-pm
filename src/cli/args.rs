@@ -100,6 +100,9 @@ pub struct StartArgs {
     /// Paths to watch (requires --watch)
     #[arg(long, num_args = 1..)]
     pub watch_paths: Option<Vec<String>>,
+    /// Run on a cron schedule (e.g. "0 * * * *") — process sleeps between runs
+    #[arg(long)]
+    pub cron: Option<String>,
 }
 
 #[derive(Args, Debug)]

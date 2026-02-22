@@ -34,6 +34,7 @@ pub async fn run(client: &DaemonClient, args: StartArgs, json_mode: bool) -> Res
         "restart_delay_ms": args.restart_delay_ms,
         "watch": args.watch,
         "watch_paths": args.watch_paths.unwrap_or_default(),
+        "cron": args.cron,
     });
 
     let result = client.post("/api/v1/processes", body).await?;

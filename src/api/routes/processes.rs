@@ -49,13 +49,17 @@ async fn start_process(
             .to_string()
     });
 
+    let cron = req.cron.clone();
+    // Cron jobs default to autorestart=false — the scheduler drives re-runs
+    let autorestart = req.autorestart.unwrap_or(cron.is_none());
+
     let config = AppConfig {
         name,
         script: req.script,
         args: req.args.unwrap_or_default(),
         cwd: req.cwd,
         instances: 1,
-        autorestart: req.autorestart.unwrap_or(true),
+        autorestart,
         max_restarts: req.max_restarts.unwrap_or(10),
         restart_delay_ms: req.restart_delay_ms.unwrap_or(1000),
         namespace: req.namespace.unwrap_or_else(|| "default".to_string()),
@@ -66,6 +70,9 @@ async fn start_process(
         log_file: None,
         error_file: None,
         max_log_size_mb: req.max_log_size_mb.unwrap_or(10),
+        cron,
+        cron_last_run: None,
+        cron_next_run: None,
     };
 
     let info = state.manager.start(config).await.map_err(ApiError::from)?;
@@ -240,13 +247,16 @@ async fn update_process(
     let name = req.name.unwrap_or(existing.name);
     let namespace = req.namespace.unwrap_or(existing.namespace);
 
+    let cron = req.cron.clone().or(existing.cron);
+    let autorestart = req.autorestart.unwrap_or(cron.is_none());
+
     let config = AppConfig {
         name,
         script: req.script,
         args: req.args.unwrap_or_default(),
         cwd: req.cwd,
         instances: 1,
-        autorestart: req.autorestart.unwrap_or(true),
+        autorestart,
         max_restarts: req.max_restarts.unwrap_or(10),
         restart_delay_ms: req.restart_delay_ms.unwrap_or(1000),
         namespace,
@@ -257,6 +267,9 @@ async fn update_process(
         log_file: None,
         error_file: None,
         max_log_size_mb: req.max_log_size_mb.unwrap_or(10),
+        cron,
+        cron_last_run: None,
+        cron_next_run: None,
     };
 
     let info = state.manager.update(id, config).await.map_err(ApiError::from)?;
