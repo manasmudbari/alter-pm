@@ -159,14 +159,15 @@ async function nsStopAll(ns) {
   setTimeout(loadProcesses, 400);
 }
 
-// @group BusinessLogic > Render : Build sidebar process list
+// @group BusinessLogic > Render : Build sidebar process list (running only)
 function renderSidebarProcesses(processes) {
   const container = document.getElementById('sidebar-process-list');
-  if (!processes.length) {
-    container.innerHTML = '<div class="sidebar-proc-empty">No processes</div>';
+  const running = processes.filter(p => p.status === 'running');
+  if (!running.length) {
+    container.innerHTML = '<div class="sidebar-proc-empty">No running processes</div>';
     return;
   }
-  container.innerHTML = processes.map(p => `
+  container.innerHTML = running.map(p => `
     <button class="sidebar-proc-btn${activeDetailProcess && activeDetailProcess.id === p.id ? ' sidebar-proc-active' : ''}"
             onclick="openProcessDetail('${p.id}', '${esc(p.name)}', '${esc(p.cwd || '')}', '${p.status}')">
       <span class="sidebar-proc-dot status-${p.status}">●</span>

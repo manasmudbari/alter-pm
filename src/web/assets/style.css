@@ -44,12 +44,15 @@ body {
 }
 
 .sidebar-logo {
-  padding: 20px 20px 16px;
+  padding: 16px 16px 14px;
   border-bottom: 1px solid var(--border);
   display: flex;
-  align-items: baseline;
-  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
+.sidebar-logo-left { display: flex; align-items: baseline; gap: 4px; }
+.sidebar-logo-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .logo { font-size: 22px; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; }
 .logo-sub { font-size: 11px; color: var(--dim); font-weight: 500; }
 
@@ -127,13 +130,10 @@ body {
 
 /* Sidebar footer */
 .sidebar-footer {
-  padding: 14px 14px 18px;
+  padding: 12px 14px 18px;
   border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
-.sidebar-uptime { font-size: 11px; }
+.sidebar-uptime { font-size: 10px; }
 .sidebar-actions {
   display: flex;
   flex-direction: column;
@@ -158,6 +158,15 @@ body {
 .sidebar-btn:hover { background: rgba(255,255,255,.05); color: var(--text); }
 .sidebar-btn-danger { color: var(--red); border-color: rgba(240,98,146,.3); }
 .sidebar-btn-danger:hover { background: rgba(240,98,146,.1); color: var(--red); }
+.sb-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.12s;
+}
+.sidebar-btn:hover .sb-icon,
+.sidebar-btn-danger:hover .sb-icon { opacity: 1; }
 
 /* Badges */
 .badge { padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; width: fit-content; }
