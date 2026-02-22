@@ -202,24 +202,6 @@
         "rs"
       ]
     },
-    "businesslogic > windows": {
-      "level": 2,
-      "parent": "businesslogic",
-      "children": [],
-      "groupCount": 1,
-      "fileTypes": [
-        "rs"
-      ]
-    },
-    "businesslogic > logging": {
-      "level": 2,
-      "parent": "businesslogic",
-      "children": [],
-      "groupCount": 2,
-      "fileTypes": [
-        "rs"
-      ]
-    },
     "businesslogic > dailyrotation": {
       "level": 2,
       "parent": "businesslogic",
@@ -302,20 +284,38 @@
         "rs"
       ]
     },
-    "apiendpoints > process": {
-      "level": 2,
-      "parent": "apiendpoints",
-      "children": [],
-      "groupCount": 9,
-      "fileTypes": [
-        "rs"
-      ]
-    },
     "databaseoperations": {
       "level": 1,
       "parent": null,
       "children": [],
       "groupCount": 4,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "businesslogic > windows": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 2,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "businesslogic > logging": {
+      "level": 2,
+      "parent": "businesslogic",
+      "children": [],
+      "groupCount": 2,
+      "fileTypes": [
+        "rs"
+      ]
+    },
+    "apiendpoints > process": {
+      "level": 2,
+      "parent": "apiendpoints",
+      "children": [],
+      "groupCount": 10,
       "fileTypes": [
         "rs"
       ]
@@ -396,7 +396,7 @@
       "level": 2,
       "parent": "businesslogic",
       "children": [],
-      "groupCount": 2,
+      "groupCount": 3,
       "fileTypes": [
         "js"
       ]

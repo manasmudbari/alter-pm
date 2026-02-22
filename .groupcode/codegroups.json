@@ -392,30 +392,6 @@
     },
     {
       "functionality": "businesslogic",
-      "description": "Spawn child process and pipe stdout/stderr to log infrastructure",
-      "filePath": "src/process/runner.rs",
-      "lineNumbers": "1-14"
-    },
-    {
-      "functionality": "businesslogic > windows",
-      "description": "npm/node/python etc. are .cmd batch scripts on Windows.",
-      "filePath": "src/process/runner.rs",
-      "lineNumbers": "31"
-    },
-    {
-      "functionality": "businesslogic > logging",
-      "description": "Stream stdout to broadcast + disk",
-      "filePath": "src/process/runner.rs",
-      "lineNumbers": "77-91"
-    },
-    {
-      "functionality": "businesslogic > logging",
-      "description": "Stream stderr to broadcast + disk",
-      "filePath": "src/process/runner.rs",
-      "lineNumbers": "92-107"
-    },
-    {
-      "functionality": "businesslogic",
       "description": "OS signal handling — graceful daemon shutdown on SIGTERM/SIGINT",
       "filePath": "src/daemon/signals.rs",
       "lineNumbers": "1-20"
@@ -661,84 +637,6 @@
       "lineNumbers": "46-58"
     },
     {
-      "functionality": "apiendpoints",
-      "description": "Process CRUD endpoints",
-      "filePath": "src/api/routes/processes.rs",
-      "lineNumbers": "1-31"
-    },
-    {
-      "functionality": "apiendpoints > process",
-      "description": "GET /processes",
-      "filePath": "src/api/routes/processes.rs",
-      "lineNumbers": "32-37"
-    },
-    {
-      "functionality": "apiendpoints > process",
-      "description": "POST /processes",
-      "filePath": "src/api/routes/processes.rs",
-      "lineNumbers": "38-74"
-    },
-    {
-      "functionality": "apiendpoints > process",
-      "description": "GET /processes/:id",
-      "filePath": "src/api/routes/processes.rs",
-      "lineNumbers": "75-84"
-    },
-    {
-      "functionality": "apiendpoints > process",
-      "description": "DELETE /processes/:id",
-      "filePath": "src/api/routes/processes.rs",
-      "lineNumbers": "85-95"
-    },
-    {
-      "functionality": "apiendpoints > process",
-      "description": "POST /processes/:id/stop",
-      "filePath": "src/api/routes/processes.rs",
-      "lineNumbers": "96-106"
-    },
-    {
-      "functionality": "apiendpoints > process",
-      "description": "POST /processes/:id/start",
-      "filePath": "src/api/routes/processes.rs",
-      "lineNumbers": "107-117"
-    },
-    {
-      "functionality": "apiendpoints > process",
-      "description": "POST /processes/:id/restart",
-      "filePath": "src/api/routes/processes.rs",
-      "lineNumbers": "118-128"
-    },
-    {
-      "functionality": "apiendpoints > process",
-      "description": "POST /processes/:id/reset",
-      "filePath": "src/api/routes/processes.rs",
-      "lineNumbers": "129-138"
-    },
-    {
-      "functionality": "apiendpoints > logs",
-      "description": "GET /processes/:id/logs?lines=N&type=all|stdout|stderr&date=YYYY-MM-DD",
-      "filePath": "src/api/routes/processes.rs",
-      "lineNumbers": "139-169"
-    },
-    {
-      "functionality": "apiendpoints > logs",
-      "description": "GET /processes/:id/logs/dates — list available rotated log dates",
-      "filePath": "src/api/routes/processes.rs",
-      "lineNumbers": "170-185"
-    },
-    {
-      "functionality": "apiendpoints > logs",
-      "description": "GET /processes/:id/logs/stream (SSE)",
-      "filePath": "src/api/routes/processes.rs",
-      "lineNumbers": "186-201"
-    },
-    {
-      "functionality": "apiendpoints > process",
-      "description": "PATCH /processes/:id — update config and apply",
-      "filePath": "src/api/routes/processes.rs",
-      "lineNumbers": "229-236"
-    },
-    {
       "functionality": "databaseoperations",
       "description": "Daemon shared state — process registry with disk persistence",
       "filePath": "src/daemon/state.rs",
@@ -761,6 +659,120 @@
       "description": "Restore previously saved processes",
       "filePath": "src/daemon/state.rs",
       "lineNumbers": "78"
+    },
+    {
+      "functionality": "businesslogic",
+      "description": "Spawn child process and pipe stdout/stderr to log infrastructure",
+      "filePath": "src/process/runner.rs",
+      "lineNumbers": "1-14"
+    },
+    {
+      "functionality": "businesslogic > windows",
+      "description": "CREATE_NO_WINDOW flag — hides the console window",
+      "filePath": "src/process/runner.rs",
+      "lineNumbers": "15"
+    },
+    {
+      "functionality": "businesslogic > windows",
+      "description": "npm/node/python etc. are .cmd batch scripts on Windows.",
+      "filePath": "src/process/runner.rs",
+      "lineNumbers": "36"
+    },
+    {
+      "functionality": "businesslogic > logging",
+      "description": "Stream stdout to broadcast + disk",
+      "filePath": "src/process/runner.rs",
+      "lineNumbers": "84-98"
+    },
+    {
+      "functionality": "businesslogic > logging",
+      "description": "Stream stderr to broadcast + disk",
+      "filePath": "src/process/runner.rs",
+      "lineNumbers": "99-114"
+    },
+    {
+      "functionality": "apiendpoints",
+      "description": "Process CRUD endpoints",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "1-32"
+    },
+    {
+      "functionality": "apiendpoints > process",
+      "description": "GET /processes",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "33-38"
+    },
+    {
+      "functionality": "apiendpoints > process",
+      "description": "POST /processes",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "39-75"
+    },
+    {
+      "functionality": "apiendpoints > process",
+      "description": "GET /processes/:id",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "76-85"
+    },
+    {
+      "functionality": "apiendpoints > process",
+      "description": "DELETE /processes/:id",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "86-96"
+    },
+    {
+      "functionality": "apiendpoints > process",
+      "description": "POST /processes/:id/stop",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "97-107"
+    },
+    {
+      "functionality": "apiendpoints > process",
+      "description": "POST /processes/:id/start",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "108-118"
+    },
+    {
+      "functionality": "apiendpoints > process",
+      "description": "POST /processes/:id/restart",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "119-129"
+    },
+    {
+      "functionality": "apiendpoints > process",
+      "description": "POST /processes/:id/reset",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "130-139"
+    },
+    {
+      "functionality": "apiendpoints > logs",
+      "description": "GET /processes/:id/logs?lines=N&type=all|stdout|stderr&date=YYYY-MM-DD",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "140-170"
+    },
+    {
+      "functionality": "apiendpoints > logs",
+      "description": "GET /processes/:id/logs/dates — list available rotated log dates",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "171-186"
+    },
+    {
+      "functionality": "apiendpoints > logs",
+      "description": "GET /processes/:id/logs/stream (SSE)",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "187-202"
+    },
+    {
+      "functionality": "apiendpoints > process",
+      "description": "PATCH /processes/:id — update config and apply",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "230-237"
+    },
+    {
+      "functionality": "apiendpoints > process",
+      "description": "POST /processes/:id/terminal",
+      "filePath": "src/api/routes/processes.rs",
+      "lineNumbers": "267"
     }
   ],
   "js": [
@@ -918,19 +930,25 @@
       "functionality": "businesslogic > processdetail",
       "description": "Toolbar action buttons",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "581-621"
+      "lineNumbers": "581-614"
+    },
+    {
+      "functionality": "businesslogic > processdetail",
+      "description": "Open a terminal window in the process cwd",
+      "filePath": "src/web/assets/app.js",
+      "lineNumbers": "615-627"
     },
     {
       "functionality": "businesslogic > autorefresh",
       "description": "Periodic process list refresh",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "622-635"
+      "lineNumbers": "628-641"
     },
     {
       "functionality": "utilities",
       "description": "Helpers",
       "filePath": "src/web/assets/app.js",
-      "lineNumbers": "636-660"
+      "lineNumbers": "642-666"
     }
   ],
   "css": [
@@ -956,7 +974,7 @@
       "functionality": "styles > datedlogs",
       "description": "Date navigation bar for historical log browsing",
       "filePath": "src/web/assets/style.css",
-      "lineNumbers": "489-498"
+      "lineNumbers": "497-506"
     }
   ]
 }
