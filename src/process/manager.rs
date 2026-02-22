@@ -53,6 +53,16 @@ impl ProcessManager {
         Ok(guard.to_info())
     }
 
+    // @group BusinessLogic > Lifecycle : Register a process as Stopped without spawning (used on restore)
+    pub async fn register_stopped(&self, config: AppConfig) -> ProcessInfo {
+        let process = ManagedProcess::new(config);
+        let id = process.id;
+        let info = process.to_info();
+        let arc = Arc::new(RwLock::new(process));
+        self.registry.insert(id, arc);
+        info
+    }
+
     // @group BusinessLogic > Lifecycle : Stop a running process
     pub async fn stop(&self, id: Uuid) -> Result<ProcessInfo> {
         let arc = self.get_arc(id)?;

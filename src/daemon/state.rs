@@ -76,12 +76,16 @@ impl DaemonState {
     }
 
     // @group DatabaseOperations : Restore previously saved processes
+    // Processes with autorestart_on_restore=true are started immediately.
+    // All others are registered as Stopped so they appear in the list and can be started manually.
     pub async fn restore(&self, saved: SavedState) {
         for app in saved.apps {
             if app.autorestart_on_restore {
                 if let Err(e) = self.manager.start(app.config).await {
                     tracing::warn!("failed to restore process '{}': {e}", app.id);
                 }
+            } else {
+                self.manager.register_stopped(app.config).await;
             }
         }
     }
