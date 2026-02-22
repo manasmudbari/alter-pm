@@ -30,6 +30,7 @@ pub fn status_color(status: &str) -> &'static str {
         "errored"              => "\x1b[35m",  // magenta
         "starting"             => "\x1b[36m",  // cyan
         "stopping"             => "\x1b[33m",  // yellow
+        "sleeping"             => "\x1b[34m",  // blue
         _                      => "\x1b[0m",   // reset
     }
 }
