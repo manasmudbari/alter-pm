@@ -75,8 +75,10 @@ function renderTable(processes) {
       <td>${p.restart_count}</td>
       <td>${p.watch ? '✓' : '-'}</td>
       <td>
-        <button class="action-btn" onclick="restartProcess('${p.id}')">Restart</button>
-        <button class="action-btn" onclick="stopProcess('${p.id}', '${esc(p.name)}')">Stop</button>
+        ${p.status === 'running'
+          ? `<button class="action-btn" onclick="restartProcess('${p.id}')">Restart</button>
+        <button class="action-btn" onclick="stopProcess('${p.id}', '${esc(p.name)}')">Stop</button>`
+          : `<button class="action-btn" onclick="startProcess2('${p.id}')">Start</button>`}
         <button class="action-btn" onclick="openLogs('${p.id}', '${esc(p.name)}')">Logs</button>
         <button class="action-btn" onclick="openEdit('${p.id}')">Edit</button>
         <button class="action-btn action-btn-danger" onclick="deleteProcess('${p.id}', '${esc(p.name)}')">Delete</button>
@@ -137,6 +139,11 @@ async function stopProcess(id, name) {
 async function restartProcess(id) {
   await fetch(`${API}/processes/${id}/restart`, { method: 'POST' });
   loadProcesses();
+}
+
+async function startProcess2(id) {
+  await fetch(`${API}/processes/${id}/start`, { method: 'POST' });
+  setTimeout(loadProcesses, 300);
 }
 
 async function deleteProcess(id, name) {
@@ -467,6 +474,11 @@ function updateDetailHeader() {
   dot.className = `sidebar-proc-dot status-${status}`;
   stat.textContent = status;
   stat.className = `detail-proc-status status-${status}`;
+
+  const isRunning = status === 'running';
+  document.getElementById('detail-btn-restart').style.display = isRunning ? '' : 'none';
+  document.getElementById('detail-btn-stop').style.display    = isRunning ? '' : 'none';
+  document.getElementById('detail-btn-start').style.display   = isRunning ? 'none' : '';
 }
 
 function appendDetailLogLine(stream, content) {
@@ -478,6 +490,12 @@ function closeDetailStream() {
 }
 
 // @group BusinessLogic > ProcessDetail : Toolbar action buttons
+async function detailStart() {
+  if (!activeDetailProcess) return;
+  await fetch(`${API}/processes/${activeDetailProcess.id}/start`, { method: 'POST' });
+  setTimeout(loadProcesses, 300);
+}
+
 async function detailRestart() {
   if (!activeDetailProcess) return;
   await fetch(`${API}/processes/${activeDetailProcess.id}/restart`, { method: 'POST' });
