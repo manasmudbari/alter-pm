@@ -76,11 +76,17 @@ impl DaemonState {
     }
 
     // @group DatabaseOperations : Restore previously saved processes
+    // Cron jobs are restored as Sleeping (scheduler is restarted to fire at next tick).
     // Processes with autorestart_on_restore=true are started immediately.
     // All others are registered as Stopped so they appear in the list and can be started manually.
     pub async fn restore(&self, saved: SavedState) {
         for app in saved.apps {
-            if app.autorestart_on_restore {
+            if app.config.cron.is_some() {
+                // Restore cron jobs in Sleeping state — scheduler will fire them at the right time
+                if let Err(e) = self.manager.register_sleeping(app.config).await {
+                    tracing::warn!("failed to restore cron process '{}': {e}", app.id);
+                }
+            } else if app.autorestart_on_restore {
                 if let Err(e) = self.manager.start(app.config).await {
                     tracing::warn!("failed to restore process '{}': {e}", app.id);
                 }
@@ -111,5 +117,8 @@ fn build_app_config(info: &ProcessInfo) -> AppConfig {
         log_file: None,
         error_file: None,
         max_log_size_mb: 10,
+        cron: info.cron.clone(),
+        cron_last_run: None,
+        cron_next_run: info.cron_next_run,
     }
 }
