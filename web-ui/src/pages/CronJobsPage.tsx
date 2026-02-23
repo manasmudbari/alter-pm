@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { useDialog } from '@/hooks/useDialog'
 import { Dialog } from '@/components/Dialog'
-import { formatNextRun, statusColor } from '@/lib/utils'
+import { formatNextRun, formatBytes, formatCpu, statusColor } from '@/lib/utils'
 import type { AppSettings } from '@/lib/settings'
 import type { CronRun, ProcessInfo } from '@/types'
 
@@ -120,7 +120,7 @@ export default function CronJobsPage({ processes, reload, settings }: Props) {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ background: 'var(--color-card)', borderBottom: '1px solid var(--color-border)' }}>
-              {['Name', 'Schedule', 'Next Run', 'Last Run', 'Status', 'Actions'].map(h => (
+              {['Name', 'Schedule', 'Next Run', 'Last Run', 'Status', 'CPU', 'Mem', 'Actions'].map(h => (
                 <Th key={h}>{h}</Th>
               ))}
             </tr>
@@ -214,6 +214,16 @@ function CronJobRow({ p, reload, confirmDelete, onConfirm, onDanger }: {
         }}>
           ● {p.status}
         </span>
+      </Td>
+
+      {/* CPU */}
+      <Td style={{ color: 'var(--color-muted-foreground)' }}>
+        {p.cpu_percent != null ? formatCpu(p.cpu_percent) : '-'}
+      </Td>
+
+      {/* Mem */}
+      <Td style={{ color: 'var(--color-muted-foreground)' }}>
+        {p.memory_bytes != null ? formatBytes(p.memory_bytes) : '-'}
       </Td>
 
       {/* Actions */}

@@ -66,3 +66,16 @@ export function parseEnvString(raw: string): Record<string, string> {
 export function parseArgs(raw: string): string[] {
   return raw.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) ?? []
 }
+
+// @group Utilities > Formatting : Format memory bytes into a human-readable string
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024)        return `${bytes} B`
+  if (bytes < 1024 ** 2)   return `${(bytes / 1024).toFixed(1)} KB`
+  if (bytes < 1024 ** 3)   return `${(bytes / 1024 ** 2).toFixed(1)} MB`
+  return `${(bytes / 1024 ** 3).toFixed(2)} GB`
+}
+
+// @group Utilities > Formatting : Format CPU percentage with one decimal place
+export function formatCpu(pct: number): string {
+  return `${pct.toFixed(1)}%`
+}

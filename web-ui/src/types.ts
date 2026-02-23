@@ -37,6 +37,10 @@ export interface ProcessInfo {
   cron: string | null
   cron_next_run: string | null
   cron_run_history: CronRun[]
+  /** CPU usage percentage (0–100 per core), null when not running */
+  cpu_percent: number | null
+  /** Resident memory in bytes, null when not running */
+  memory_bytes: number | null
 }
 
 export interface DaemonHealth {

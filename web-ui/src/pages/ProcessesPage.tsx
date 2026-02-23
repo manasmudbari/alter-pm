@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { useDialog } from '@/hooks/useDialog'
 import { Dialog } from '@/components/Dialog'
-import { formatLastRun, formatNextRun, formatUptime, statusColor } from '@/lib/utils'
+import { formatLastRun, formatNextRun, formatUptime, formatBytes, formatCpu, statusColor } from '@/lib/utils'
 import type { AppSettings } from '@/lib/settings'
 import type { ProcessInfo } from '@/types'
 
@@ -81,7 +81,7 @@ export default function ProcessesPage({ processes, reload, settings }: Props) {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ background: 'var(--color-card)', borderBottom: '1px solid var(--color-border)' }}>
-              {['ID', 'Name', 'Status', 'PID', 'Uptime', 'Restarts', 'Mode', 'Next Run', 'Last Run', 'Actions'].map(h => (
+              {['ID', 'Name', 'Status', 'PID', 'Uptime', 'CPU', 'Mem', 'Restarts', 'Mode', 'Next Run', 'Last Run', 'Actions'].map(h => (
                 <Th key={h}>{h}</Th>
               ))}
             </tr>
@@ -98,7 +98,7 @@ export default function ProcessesPage({ processes, reload, settings }: Props) {
                   onClick={() => toggleNs(ns)}
                   style={{ background: 'var(--color-muted)', cursor: 'pointer', userSelect: 'none' }}
                 >
-                  <td colSpan={10} style={{ padding: '6px 12px' }}>
+                  <td colSpan={12} style={{ padding: '6px 12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: 10, color: 'var(--color-muted-foreground)' }}>{isCollapsed ? '▶' : '▼'}</span>
                       <span style={{ fontWeight: 600, fontSize: 12 }}>{ns}</span>
@@ -191,6 +191,12 @@ function ProcessRow({ p, reload, confirmDelete, onConfirm, onDanger, onOpenDetai
       </Td>
       <Td>{p.pid ?? '-'}</Td>
       <Td>{p.uptime_secs != null ? formatUptime(p.uptime_secs) : '-'}</Td>
+      <Td style={{ color: 'var(--color-muted-foreground)' }}>
+        {p.cpu_percent != null ? formatCpu(p.cpu_percent) : '-'}
+      </Td>
+      <Td style={{ color: 'var(--color-muted-foreground)' }}>
+        {p.memory_bytes != null ? formatBytes(p.memory_bytes) : '-'}
+      </Td>
       <Td>{p.restart_count}</Td>
       <Td>{modeCell}</Td>
       <Td style={{ color: 'var(--color-muted-foreground)' }}>{formatNextRun(p.cron_next_run)}</Td>
