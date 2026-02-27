@@ -1,7 +1,10 @@
 // @group BusinessLogic : Settings page — all user-configurable preferences
 
+import { useEffect, useState } from 'react'
+import { Copy, Check } from 'lucide-react'
 import type { AppSettings } from '@/lib/settings'
 import { DEFAULT_SETTINGS, LOG_TAIL_OPTIONS, REFRESH_INTERVAL_OPTIONS } from '@/lib/settings'
+import { api } from '@/lib/api'
 import { inputStyle } from './StartPage'
 
 interface Props {
@@ -84,7 +87,7 @@ function SettingRow({
   label, description, control, isLast = false,
 }: {
   label: string
-  description?: string
+  description?: React.ReactNode
   control: React.ReactNode
   isLast?: boolean
 }) {
@@ -99,9 +102,44 @@ function SettingRow({
   )
 }
 
+// @group Utilities > CopyPath : Path display field with one-click copy
+function CopyPath({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false)
+  function copy() {
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    }).catch(() => {})
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <code style={{
+        fontSize: 11, fontFamily: 'monospace',
+        background: 'var(--color-muted)', border: '1px solid var(--color-border)',
+        borderRadius: 4, padding: '3px 8px',
+        color: 'var(--color-foreground)', maxWidth: 340,
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        display: 'block',
+      }} title={value}>{value}</code>
+      <button onClick={copy} title="Copy path" style={{
+        padding: 4, background: 'transparent', border: 'none',
+        cursor: 'pointer', color: copied ? 'var(--color-status-running)' : 'var(--color-muted-foreground)',
+        display: 'flex', alignItems: 'center',
+      }}>
+        {copied ? <Check size={13} /> : <Copy size={13} />}
+      </button>
+    </div>
+  )
+}
+
 // @group BusinessLogic > SettingsPage : Main settings page component
 export default function SettingsPage({ settings, onUpdate, onReset }: Props) {
   const isDefault = JSON.stringify(settings) === JSON.stringify(DEFAULT_SETTINGS)
+  const [sysPaths, setSysPaths] = useState<{ data_dir: string; log_dir: string } | null>(null)
+
+  useEffect(() => {
+    api.getSystemPaths().then(setSysPaths).catch(() => {})
+  }, [])
 
   const selectStyle: React.CSSProperties = {
     ...inputStyle,
@@ -250,6 +288,22 @@ export default function SettingsPage({ settings, onUpdate, onReset }: Props) {
               spellCheck={false}
             />
           }
+        />
+      </div>
+
+      {/* ── Section: Storage ── */}
+      <p style={sectionTitle}>Storage</p>
+      <div style={card}>
+        <SettingRow
+          label="Data directory"
+          description="Root folder where alter stores state, PID, and daemon logs."
+          control={sysPaths ? <CopyPath value={sysPaths.data_dir} /> : <span style={{ fontSize: 11, color: 'var(--color-muted-foreground)' }}>loading…</span>}
+        />
+        <SettingRow
+          label="Log directory"
+          description={<>Where process stdout/stderr logs are written. Override with <code style={{ fontSize: 10, fontFamily: 'monospace' }}>ALTER_LOG_DIR</code> env var.</>}
+          isLast
+          control={sysPaths ? <CopyPath value={sysPaths.log_dir} /> : <span style={{ fontSize: 11, color: 'var(--color-muted-foreground)' }}>loading…</span>}
         />
       </div>
 

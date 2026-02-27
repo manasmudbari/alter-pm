@@ -63,6 +63,23 @@ export function parseEnvString(raw: string): Record<string, string> {
   return env
 }
 
+// @group Utilities > Env : Parse .env file format (one KEY=VALUE per line, # comments ignored)
+export function parseDotEnv(raw: string): Record<string, string> {
+  const env: Record<string, string> = {}
+  for (const line of raw.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const idx = trimmed.indexOf('=')
+    if (idx > 0) env[trimmed.slice(0, idx).trim()] = trimmed.slice(idx + 1)
+  }
+  return env
+}
+
+// @group Utilities > Env : Serialize env record to .env file format (one KEY=VALUE per line)
+export function envToString(env: Record<string, string>): string {
+  return Object.entries(env).map(([k, v]) => `${k}=${v}`).join('\n')
+}
+
 export function parseArgs(raw: string): string[] {
   return raw.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) ?? []
 }

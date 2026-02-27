@@ -1,5 +1,41 @@
 // @group Types : All API data structures mirroring Rust models
 
+// @group Types > Notifications : Webhook / Slack / Teams notification config
+export interface NotificationEvents {
+  on_crash: boolean
+  on_restart: boolean
+  on_start: boolean
+  on_stop: boolean
+}
+
+export interface WebhookTarget {
+  url: string
+  enabled: boolean
+}
+
+export interface SlackTarget {
+  webhook_url: string
+  enabled: boolean
+  channel?: string
+}
+
+export interface TeamsTarget {
+  webhook_url: string
+  enabled: boolean
+}
+
+export interface NotificationConfig {
+  webhook?: WebhookTarget
+  slack?: SlackTarget
+  teams?: TeamsTarget
+  events: NotificationEvents
+}
+
+export interface NotificationsStore {
+  global: NotificationConfig
+  namespaces: Record<string, NotificationConfig>
+}
+
 export type ProcessStatus =
   | 'stopped'
   | 'starting'
@@ -41,6 +77,10 @@ export interface ProcessInfo {
   cpu_percent: number | null
   /** Resident memory in bytes, null when not running */
   memory_bytes: number | null
+  /** Environment variables passed to the process */
+  env: Record<string, string>
+  /** Process-level notification override */
+  notify?: NotificationConfig
 }
 
 export interface DaemonHealth {
@@ -77,4 +117,5 @@ export interface StartProcessBody {
   restart_delay_ms?: number
   watch_paths?: string[]
   cron?: string
+  notify?: NotificationConfig
 }

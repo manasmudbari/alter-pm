@@ -2,12 +2,15 @@
 
 use crate::config::daemon_config::DaemonConfig;
 use crate::config::ecosystem::AppConfig;
+use crate::config::notification_store::NotificationsStore;
 use crate::models::cron_run::CronRun;
 use crate::models::process_info::ProcessInfo;
 use crate::process::manager::ProcessManager;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use uuid::Uuid;
 
 
@@ -33,14 +36,17 @@ pub struct DaemonState {
     pub manager: ProcessManager,
     pub config: DaemonConfig,
     pub started_at: DateTime<Utc>,
+    pub notifications: Arc<RwLock<NotificationsStore>>,
 }
 
 impl DaemonState {
     pub fn new(config: DaemonConfig) -> Self {
+        let notifications = Arc::new(RwLock::new(crate::config::notification_store::load()));
         Self {
-            manager: ProcessManager::new(),
+            manager: ProcessManager::new(Arc::clone(&notifications)),
             config,
             started_at: Utc::now(),
+            notifications,
         }
     }
 
@@ -103,7 +109,6 @@ impl DaemonState {
 
 fn build_app_config(info: &ProcessInfo) -> AppConfig {
     use crate::config::ecosystem::AppConfig;
-    use std::collections::HashMap;
     AppConfig {
         name: info.name.clone(),
         script: info.script.clone(),
@@ -117,12 +122,13 @@ fn build_app_config(info: &ProcessInfo) -> AppConfig {
         watch: info.watch,
         watch_paths: vec![],
         watch_ignore: vec![],
-        env: HashMap::new(),
+        env: info.env.clone(),
         log_file: None,
         error_file: None,
         max_log_size_mb: 10,
         cron: info.cron.clone(),
         cron_last_run: None,
         cron_next_run: info.cron_next_run,
+        notify: info.notify.clone(),
     }
 }

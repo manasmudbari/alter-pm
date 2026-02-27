@@ -4,6 +4,7 @@ use crate::models::cron_run::CronRun;
 use crate::models::process_status::ProcessStatus;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,4 +33,8 @@ pub struct ProcessInfo {
     pub cpu_percent: Option<f32>,
     /// Resident memory in bytes — None when process is not running
     pub memory_bytes: Option<u64>,
+    /// Environment variables passed to the process
+    pub env: HashMap<String, String>,
+    /// Process-level notification override
+    pub notify: Option<crate::models::notification::NotificationConfig>,
 }

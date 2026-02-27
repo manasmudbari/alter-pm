@@ -1,11 +1,15 @@
 // @group BusinessLogic : Root app — layout shell + React Router
 
+import { useState } from 'react'
 import { BrowserRouter, Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { LayoutGrid, Plus, Clock, ScrollText, Settings, Bell, type LucideIcon } from 'lucide-react'
 import { useDaemonHealth } from '@/hooks/useDaemonHealth'
 import { useProcesses } from '@/hooks/useProcesses'
 import { useSettings } from '@/hooks/useSettings'
 import { useDialog } from '@/hooks/useDialog'
+import { useNotificationTray } from '@/hooks/useNotificationTray'
 import { Dialog } from '@/components/Dialog'
+import { NotificationTray } from '@/components/NotificationTray'
 import { formatUptime, statusColor } from '@/lib/utils'
 import { api } from '@/lib/api'
 import ProcessesPage from '@/pages/ProcessesPage'
@@ -16,6 +20,8 @@ import EditPage from '@/pages/EditPage'
 import ProcessDetailPage from '@/pages/ProcessDetailPage'
 import SettingsPage from '@/pages/SettingsPage'
 import AnalyticsPage from '@/pages/AnalyticsPage'
+import LogLibraryPage from '@/pages/LogLibraryPage'
+import NotificationsPage from '@/pages/NotificationsPage'
 import type { ProcessInfo } from '@/types'
 
 // @group BusinessLogic > Layout : Sidebar + content shell
@@ -26,6 +32,13 @@ function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
   const { dialogState, confirm, alert, handleConfirm, handleCancel } = useDialog()
+
+  // @group BusinessLogic > NotificationTray : In-app activity tray
+  const { notifications, unreadCount, markAllRead, clearAll, dismiss } = useNotificationTray(processes)
+  const [trayOpen, setTrayOpen] = useState(false)
+
+  const openTray = () => { setTrayOpen(true); markAllRead() }
+  const closeTray = () => setTrayOpen(false)
 
   const active = processes.filter(p =>
     p.status === 'running' || p.status === 'sleeping' || p.status === 'watching'
@@ -62,6 +75,16 @@ function Layout() {
         onCancel={handleCancel}
       />
 
+      {/* Activity tray — slides in over main content */}
+      <NotificationTray
+        open={trayOpen}
+        notifications={notifications}
+        onClose={closeTray}
+        onMarkAllRead={markAllRead}
+        onClearAll={clearAll}
+        onDismiss={dismiss}
+      />
+
       {/* Sidebar */}
       <aside style={{
         width: 220, minWidth: 220,
@@ -69,6 +92,7 @@ function Layout() {
         borderRight: '1px solid var(--color-border)',
         display: 'flex', flexDirection: 'column',
         height: '100vh', overflow: 'hidden',
+        position: 'relative', zIndex: 201,
       }}>
         {/* Logo */}
         <div style={{
@@ -81,30 +105,30 @@ function Layout() {
             <span style={{ fontSize: 11, color: 'var(--color-muted-foreground)', fontWeight: 500 }}>pm</span>
           </Link>
           <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-end', gap: 2 }}>
-              <span style={{ fontSize: 10, color: 'var(--color-muted-foreground)' }}>
-            {health && (
-               <>
-                v{health.version} · {formatUptime(health.uptime_secs)}
-               </> 
+            <span style={{ fontSize: 10, color: 'var(--color-muted-foreground)' }}>
+              {health && (
+                <>v{health.version} · {formatUptime(health.uptime_secs)}</>
               )}
-              </span>
+            </span>
             <span className='px-2' style={{
               fontSize: 16, fontWeight: 600,
               color: connected ? 'var(--color-status-running)' : 'var(--color-status-crashed)',
-            }}>
-              ●
-            </span>
+            }}>●</span>
           </div>
         </div>
 
         {/* Nav */}
         <nav style={{ padding: '8px 0', borderBottom: '1px solid var(--color-border)' }}>
-          <NavBtn to="/processes" label="▦  Processes" active={location.pathname === '/processes' || location.pathname.startsWith('/processes/')} />
-          <NavBtn to="/start" label="+  Start Process" active={location.pathname === '/start'} />
+          <NavBtn to="/processes" icon={LayoutGrid} label="Processes" active={location.pathname === '/processes' || location.pathname.startsWith('/processes/')} />
+          <NavBtn to="/start" icon={Plus} label="Start Process" active={location.pathname === '/start'} />
           <div style={{ height: 4 }} />
-          <NavBtn to="/cron-jobs" label="⏱  Cron Jobs" active={location.pathname === '/cron-jobs'} />
-          <NavBtn to="/cron-jobs/new" label="+  New Cron Job" active={location.pathname === '/cron-jobs/new'} />
+          <NavBtn to="/cron-jobs" icon={Clock} label="Cron Jobs" active={location.pathname === '/cron-jobs'} />
+          <NavBtn to="/cron-jobs/new" icon={Plus} label="New Cron Job" active={location.pathname === '/cron-jobs/new'} />
           <div style={{ height: 4 }} />
+          <NavBtn to="/logs" icon={ScrollText} label="Log Library" active={location.pathname === '/logs'} />
+
+          {/* @group BusinessLogic > BellBtn : Activity tray toggle — not a nav link */}
+          <BellBtn unreadCount={unreadCount} onClick={openTray} />
         </nav>
 
         {/* Running processes list */}
@@ -120,8 +144,7 @@ function Layout() {
 
         {/* Footer */}
         <div style={{ padding: '10px 12px', borderTop: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-         
-          <NavBtn to="/settings" label="⚙  Settings" active={location.pathname === '/settings'} />
+          <NavBtn to="/settings" icon={Settings} label="Settings" active={location.pathname === '/settings'} />
           <div style={{ display: 'flex', gap: 6 }}>
             <SidebarBtn label="Save" onClick={handleSave} />
             <SidebarBtn label="Shutdown" onClick={handleShutdown} danger />
@@ -139,6 +162,8 @@ function Layout() {
           <Route path="/processes/:id" element={<ProcessDetailPage reload={reload} settings={settings} />} />
           <Route path="/cron-jobs" element={<CronJobsPage processes={processes} reload={reload} settings={settings} />} />
           <Route path="/cron-jobs/new" element={<CreateCronJobPage onDone={() => { reload(); navigate('/cron-jobs') }} settings={settings} />} />
+          <Route path="/logs" element={<LogLibraryPage processes={processes} reload={reload} />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/settings" element={<SettingsPage settings={settings} onUpdate={updateSettings} onReset={resetToDefaults} />} />
         </Routes>
       </div>
@@ -147,10 +172,11 @@ function Layout() {
 }
 
 // @group BusinessLogic > NavBtn : Sidebar navigation link with active highlight
-function NavBtn({ to, label, active }: { to: string; label: string; active: boolean }) {
+function NavBtn({ to, icon: Icon, label, active }: { to: string; icon: LucideIcon; label: string; active: boolean }) {
   return (
     <Link to={to} style={{
-      display: 'block', padding: '7px 16px', fontSize: 13,
+      display: 'flex', alignItems: 'center', gap: 9,
+      padding: '7px 16px', fontSize: 13,
       color: active ? 'var(--color-primary)' : 'var(--color-foreground)',
       textDecoration: 'none', fontWeight: active ? 600 : 500,
       background: active ? 'var(--color-accent)' : 'transparent',
@@ -159,8 +185,52 @@ function NavBtn({ to, label, active }: { to: string; label: string; active: bool
       onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--color-accent)' }}
       onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
     >
+      <Icon size={14} />
       {label}
     </Link>
+  )
+}
+
+// @group BusinessLogic > BellBtn : Activity bell button with unread badge
+function BellBtn({ unreadCount, onClick }: { unreadCount: number; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 9,
+        width: '100%', padding: '7px 16px', fontSize: 13,
+        color: 'var(--color-foreground)',
+        background: 'transparent', border: 'none',
+        borderLeft: '2px solid transparent',
+        cursor: 'pointer', fontWeight: 500,
+        textAlign: 'left',
+        fontFamily: 'inherit',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-accent)' }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+    >
+      {/* Bell icon + unread badge */}
+      <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+        <Bell size={14} />
+        {unreadCount > 0 && (
+          <span style={{
+            position: 'absolute',
+            top: -5, right: -5,
+            minWidth: 14, height: 14,
+            borderRadius: 7,
+            background: 'var(--color-destructive)',
+            color: '#fff',
+            fontSize: 9, fontWeight: 700,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '0 3px',
+            lineHeight: 1,
+          }}>
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </span>
+      Activity
+    </button>
   )
 }
 

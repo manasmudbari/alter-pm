@@ -1,6 +1,6 @@
 // @group APIEndpoints : All fetch calls to the alter daemon REST API
 
-import type { CronRun, DaemonHealth, LogLine, ProcessInfo, ScriptInfo, StartProcessBody } from '@/types'
+import type { CronRun, DaemonHealth, LogLine, NotificationConfig, NotificationsStore, ProcessInfo, ScriptInfo, StartProcessBody } from '@/types'
 
 const BASE = '/api/v1'
 
@@ -56,8 +56,17 @@ export const api = {
     return request(`/processes/${id}/logs?${qs}`)
   },
 
-  getLogDates: (id: string): Promise<{ dates: string[] }> =>
+  getLogDates: (id: string): Promise<{ dates: string[]; has_current: boolean }> =>
     request(`/processes/${id}/logs/dates`),
+
+  deleteLogs: (id: string): Promise<{ success: boolean }> =>
+    request(`/processes/${id}/logs`, { method: 'DELETE' }),
+
+  getEnvFile: (id: string): Promise<{ content: string; exists: boolean }> =>
+    request(`/processes/${id}/envfile`),
+
+  saveEnvFile: (id: string, content: string): Promise<{ success: boolean; path: string }> =>
+    request(`/processes/${id}/envfile`, { method: 'PUT', body: JSON.stringify({ content }) }),
 
   getCronHistory: (id: string): Promise<{ runs: CronRun[] }> =>
     request(`/processes/${id}/cron/history`),
@@ -81,9 +90,28 @@ export const api = {
   runScript: (name: string): EventSource =>
     new EventSource(`${BASE}/scripts/${name}/run`),
 
+  // @group APIEndpoints > Notifications
+  getNotifications: (): Promise<NotificationsStore> =>
+    request('/notifications'),
+
+  updateGlobalNotifications: (config: NotificationConfig): Promise<{ success: boolean }> =>
+    request('/notifications/global', { method: 'PUT', body: JSON.stringify(config) }),
+
+  updateNamespaceNotifications: (ns: string, config: NotificationConfig): Promise<{ success: boolean }> =>
+    request(`/notifications/namespace/${encodeURIComponent(ns)}`, { method: 'PUT', body: JSON.stringify(config) }),
+
+  deleteNamespaceNotifications: (ns: string): Promise<{ success: boolean }> =>
+    request(`/notifications/namespace/${encodeURIComponent(ns)}`, { method: 'DELETE' }),
+
+  testNotification: (config: NotificationConfig): Promise<{ success: boolean; message: string }> =>
+    request('/notifications/test', { method: 'POST', body: JSON.stringify(config) }),
+
   // @group APIEndpoints > System
   getHealth: (): Promise<DaemonHealth> =>
     request('/system/health'),
+
+  getSystemPaths: (): Promise<{ data_dir: string; log_dir: string }> =>
+    request('/system/paths'),
 
   saveState: (): Promise<void> =>
     request('/system/save', { method: 'POST' }),

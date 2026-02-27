@@ -24,10 +24,11 @@ pub fn router(state: Arc<DaemonState>) -> Router {
         .route("/{id}/restart", post(restart_process))
         .route("/{id}/reset", post(reset_process))
         .route("/{id}/terminal", post(open_terminal))
-        .route("/{id}/logs", get(get_logs))
+        .route("/{id}/logs", get(get_logs).delete(delete_logs))
         .route("/{id}/logs/dates", get(get_log_dates))
         .route("/{id}/logs/stream", get(stream_logs))
         .route("/{id}/cron/history", get(get_cron_history))
+        .route("/{id}/envfile", get(get_envfile).put(put_envfile))
         .with_state(state)
 }
 
@@ -74,6 +75,7 @@ async fn start_process(
         cron,
         cron_last_run: None,
         cron_next_run: None,
+        notify: req.notify,
     };
 
     let info = state.manager.start(config).await.map_err(ApiError::from)?;
@@ -176,7 +178,7 @@ async fn get_logs(
     Ok(Json(json!({ "lines": filtered })))
 }
 
-// @group APIEndpoints > Logs : GET /processes/:id/logs/dates — list available rotated log dates
+// @group APIEndpoints > Logs : GET /processes/:id/logs/dates — list available rotated log dates + current log presence
 async fn get_log_dates(
     State(state): State<Arc<DaemonState>>,
     Path(id_str): Path<String>,
@@ -184,12 +186,13 @@ async fn get_log_dates(
     let id = resolve(&state, &id_str).await?;
     let info = state.manager.get(id).await.map_err(ApiError::from)?;
     let log_dir = crate::config::paths::process_log_dir(&info.name);
+    let has_current = log_dir.join("out.log").exists() || log_dir.join("err.log").exists();
     let dates = crate::logging::reader::list_log_dates(&log_dir)
         .unwrap_or_default()
         .into_iter()
         .map(|d| d.format("%Y-%m-%d").to_string())
         .collect::<Vec<_>>();
-    Ok(Json(json!({ "dates": dates })))
+    Ok(Json(json!({ "dates": dates, "has_current": has_current })))
 }
 
 // @group APIEndpoints > Logs : GET /processes/:id/logs/stream (SSE)
@@ -271,6 +274,7 @@ async fn update_process(
         cron,
         cron_last_run: None,
         cron_next_run: None,
+        notify: req.notify,
     };
 
     let info = state.manager.update(id, config).await.map_err(ApiError::from)?;
@@ -324,6 +328,65 @@ async fn get_cron_history(
     let id = resolve(&state, &id_str).await?;
     let info = state.manager.get(id).await.map_err(ApiError::from)?;
     Ok(Json(json!({ "runs": info.cron_run_history })))
+}
+
+// @group APIEndpoints > Logs : DELETE /processes/:id/logs — remove all log files for a process
+async fn delete_logs(
+    State(state): State<Arc<DaemonState>>,
+    Path(id_str): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    let id = resolve(&state, &id_str).await?;
+    let info = state.manager.get(id).await.map_err(ApiError::from)?;
+    let log_dir = crate::config::paths::process_log_dir(&info.name);
+
+    if log_dir.exists() {
+        tokio::fs::remove_dir_all(&log_dir)
+            .await
+            .map_err(|e| ApiError::internal(format!("failed to delete logs: {e}")))?;
+    }
+
+    Ok(Json(json!({ "success": true, "message": "logs deleted" })))
+}
+
+// @group APIEndpoints > EnvFile : GET /processes/:id/envfile — read .env file from process cwd
+async fn get_envfile(
+    State(state): State<Arc<DaemonState>>,
+    Path(id_str): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    let id = resolve(&state, &id_str).await?;
+    let info = state.manager.get(id).await.map_err(ApiError::from)?;
+    let cwd = info.cwd.as_deref().unwrap_or(".");
+    let env_path = std::path::Path::new(cwd).join(".env");
+
+    if !env_path.exists() {
+        return Ok(Json(json!({ "content": "", "exists": false })));
+    }
+
+    let content = tokio::fs::read_to_string(&env_path)
+        .await
+        .map_err(|e| ApiError::internal(format!("failed to read .env file: {e}")))?;
+
+    Ok(Json(json!({ "content": content, "exists": true })))
+}
+
+// @group APIEndpoints > EnvFile : PUT /processes/:id/envfile — write .env file to process cwd
+async fn put_envfile(
+    State(state): State<Arc<DaemonState>>,
+    Path(id_str): Path<String>,
+    Json(body): Json<serde_json::Value>,
+) -> Result<Json<Value>, ApiError> {
+    let id = resolve(&state, &id_str).await?;
+    let info = state.manager.get(id).await.map_err(ApiError::from)?;
+    let cwd = info.cwd.as_deref().unwrap_or(".");
+    let env_path = std::path::Path::new(cwd).join(".env");
+
+    let content = body["content"].as_str().unwrap_or("").to_string();
+
+    tokio::fs::write(&env_path, content)
+        .await
+        .map_err(|e| ApiError::internal(format!("failed to write .env file: {e}")))?;
+
+    Ok(Json(json!({ "success": true, "path": env_path.to_string_lossy() })))
 }
 
 async fn resolve(state: &DaemonState, id_str: &str) -> Result<Uuid, ApiError> {
