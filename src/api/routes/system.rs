@@ -14,10 +14,19 @@ use std::sync::Arc;
 pub fn router(state: Arc<DaemonState>) -> Router {
     Router::new()
         .route("/health", get(health))
+        .route("/paths", get(paths))
         .route("/save", post(save_state))
         .route("/resurrect", post(resurrect_state))
         .route("/shutdown", post(shutdown))
         .with_state(state)
+}
+
+// @group APIEndpoints > System : GET /system/paths
+async fn paths() -> Json<Value> {
+    Json(json!({
+        "data_dir": crate::config::paths::data_dir().to_string_lossy(),
+        "log_dir":  crate::config::paths::log_dir().to_string_lossy(),
+    }))
 }
 
 // @group APIEndpoints > System : GET /system/health

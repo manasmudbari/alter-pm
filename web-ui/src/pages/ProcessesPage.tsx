@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Play, Square, RotateCcw, ScrollText, Pencil, Trash2 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useDialog } from '@/hooks/useDialog'
 import { Dialog } from '@/components/Dialog'
@@ -202,17 +203,17 @@ function ProcessRow({ p, reload, confirmDelete, onConfirm, onDanger, onOpenDetai
       <Td style={{ color: 'var(--color-muted-foreground)' }}>{formatNextRun(p.cron_next_run)}</Td>
       <Td style={{ color: 'var(--color-muted-foreground)' }} title={p.stopped_at ?? p.started_at ?? ''}>{formatLastRun(p)}</Td>
       <Td>
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'nowrap' }}>
+        <div style={{ display: 'flex', gap: 3, flexWrap: 'nowrap' }}>
           {isActive
             ? <>
-                <ActionBtn label="Restart" onClick={doRestart} />
-                <ActionBtn label="Stop" onClick={doStop} />
+                <ActionBtn label="Restart" icon={RotateCcw} onClick={doRestart} />
+                <ActionBtn label="Stop" icon={Square} onClick={doStop} />
               </>
-            : <ActionBtn label="Start" onClick={doStart} />
+            : <ActionBtn label="Start" icon={Play} onClick={doStart} />
           }
-          <ActionBtn label="Logs" onClick={() => navigate(`/processes/${p.id}`)} />
-          <ActionBtn label="Edit" onClick={onEdit} />
-          <ActionBtn label="Delete" onClick={doDelete} danger />
+          <ActionBtn label="Logs" icon={ScrollText} onClick={() => navigate(`/processes/${p.id}`)} />
+          <ActionBtn label="Edit" icon={Pencil} onClick={onEdit} />
+          <ActionBtn label="Delete" icon={Trash2} onClick={doDelete} danger />
         </div>
       </Td>
     </tr>
@@ -236,15 +237,25 @@ function Td({ children, style, title }: { children?: React.ReactNode; style?: Re
   )
 }
 
-function ActionBtn({ label, onClick, danger }: { label: string; onClick: () => void; danger?: boolean }) {
+function ActionBtn({ label, icon: Icon, onClick, danger }: {
+  label: string
+  icon: React.ElementType
+  onClick: () => void
+  danger?: boolean
+}) {
   return (
-    <button onClick={onClick} style={{
-      padding: '2px 8px', fontSize: 11, fontWeight: 500,
-      background: 'var(--color-secondary)', border: '1px solid var(--color-border)',
-      borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap',
-      color: danger ? 'var(--color-destructive)' : 'var(--color-foreground)',
-    }}>
-      {label}
+    <button
+      title={label}
+      onClick={onClick}
+      style={{
+        padding: 0, width: 26, height: 26,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'var(--color-secondary)', border: '1px solid var(--color-border)',
+        borderRadius: 4, cursor: 'pointer', flexShrink: 0,
+        color: danger ? 'var(--color-destructive)' : 'var(--color-muted-foreground)',
+      }}
+    >
+      <Icon size={13} strokeWidth={1.75} />
     </button>
   )
 }

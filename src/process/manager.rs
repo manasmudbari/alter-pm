@@ -1,10 +1,12 @@
 // @group BusinessLogic : Process manager — spawns, tracks, stops, and restarts all child processes
 
 use crate::config::ecosystem::AppConfig;
+use crate::config::notification_store::NotificationsStore;
 use crate::logging::writer::LogWriter;
 use crate::models::cron_run::{CronRun, MAX_CRON_HISTORY};
 use crate::models::process_info::ProcessInfo;
 use crate::models::process_status::ProcessStatus;
+use crate::notifications::sender::{fire_event, ProcessEvent};
 use crate::process::instance::{LogLine, ManagedProcess};
 use crate::process::restarter::{watch_and_restart, RestartEvent};
 use crate::process::runner::{spawn_process, wait_for_exit};
@@ -29,10 +31,12 @@ pub struct ProcessManager {
     cron_trigger_tx: mpsc::Sender<Uuid>,
     /// Active CronScheduler handles, keyed by process_id
     cron_schedulers: Arc<Mutex<HashMap<Uuid, CronScheduler>>>,
+    /// Shared notification store for firing alerts on process events
+    notifications: Arc<RwLock<NotificationsStore>>,
 }
 
 impl ProcessManager {
-    pub fn new() -> Self {
+    pub fn new(notifications: Arc<RwLock<NotificationsStore>>) -> Self {
         let registry = Arc::new(DashMap::new());
         let (restart_tx, restart_rx) = mpsc::channel::<RestartEvent>(256);
         let (cron_trigger_tx, cron_trigger_rx) = mpsc::channel::<Uuid>(256);
@@ -41,19 +45,21 @@ impl ProcessManager {
 
         let reg_clone = Arc::clone(&registry);
         let rtx_clone = restart_tx.clone();
+        let notif_restart = Arc::clone(&notifications);
 
         // @group BusinessLogic > Restarter : Background task that handles restart events
         tokio::spawn(async move {
-            Self::restart_loop(reg_clone, restart_rx, rtx_clone).await;
+            Self::restart_loop(reg_clone, restart_rx, rtx_clone, notif_restart).await;
         });
 
         let reg_cron = Arc::clone(&registry);
         let cron_sched_clone = Arc::clone(&cron_schedulers);
         let ctrigger_tx_clone = cron_trigger_tx.clone();
+        let notif_cron = Arc::clone(&notifications);
 
         // @group BusinessLogic > Cron : Background task that handles cron trigger events
         tokio::spawn(async move {
-            Self::cron_trigger_loop(reg_cron, cron_trigger_rx, cron_sched_clone, ctrigger_tx_clone).await;
+            Self::cron_trigger_loop(reg_cron, cron_trigger_rx, cron_sched_clone, ctrigger_tx_clone, notif_cron).await;
         });
 
         let reg_metrics = Arc::clone(&registry);
@@ -68,6 +74,7 @@ impl ProcessManager {
             restart_tx,
             cron_trigger_tx,
             cron_schedulers,
+            notifications,
         }
     }
 
@@ -148,7 +155,15 @@ impl ProcessManager {
         proc.stopped_at = Some(Utc::now());
         proc.cron_next_run = None;
 
-        Ok(proc.to_info())
+        let info_for_notif = proc.to_info();
+        let notif = Arc::clone(&self.notifications);
+        let info_clone = info_for_notif.clone();
+        tokio::spawn(async move {
+            let store = notif.read().await;
+            fire_event(&store, &info_clone, ProcessEvent::Stopped).await;
+        });
+
+        Ok(info_for_notif)
     }
 
     // @group BusinessLogic > Lifecycle : Restart a process (stop then start)
@@ -307,7 +322,7 @@ impl ProcessManager {
 
         let pid = child.id();
 
-        {
+        let info_for_notif = {
             let mut proc = arc.write().await;
             proc.pid = pid;
             // Cron jobs don't use autorestart — they're driven by the scheduler.
@@ -317,7 +332,15 @@ impl ProcessManager {
             } else {
                 ProcessStatus::Running
             };
-        }
+            proc.to_info()
+        };
+
+        // Fire Started notification (non-blocking)
+        let notif = Arc::clone(&self.notifications);
+        tokio::spawn(async move {
+            let store = notif.read().await;
+            fire_event(&store, &info_for_notif, ProcessEvent::Started).await;
+        });
 
         // For cron jobs we force autorestart=false so watch_and_restart just fires Exited.
         // The cron_trigger_loop handles re-spawning on the next tick.
@@ -384,6 +407,7 @@ impl ProcessManager {
         registry: Arc<ProcessRegistry>,
         mut rx: mpsc::Receiver<RestartEvent>,
         restart_tx: mpsc::Sender<RestartEvent>,
+        notifications: Arc<RwLock<NotificationsStore>>,
     ) {
         while let Some(event) = rx.recv().await {
             match event {
@@ -392,6 +416,7 @@ impl ProcessManager {
                         let arc = Arc::clone(arc.value());
                         let rtx = restart_tx.clone();
                         let registry2 = Arc::clone(&registry);
+                        let notifications = Arc::clone(&notifications);
 
                         tokio::spawn(async move {
                             // Stop existing child if still alive
@@ -429,7 +454,7 @@ impl ProcessManager {
                             ).await {
                                 Ok(child) => {
                                     let pid = child.id();
-                                    {
+                                    let info_for_notif = {
                                         let mut proc = arc.write().await;
                                         proc.pid = pid;
                                         proc.status = if config.watch {
@@ -437,7 +462,14 @@ impl ProcessManager {
                                         } else {
                                             ProcessStatus::Running
                                         };
-                                    }
+                                        proc.to_info()
+                                    };
+                                    // Fire Restarted notification (non-blocking)
+                                    let notif2 = Arc::clone(&notifications);
+                                    tokio::spawn(async move {
+                                        let store = notif2.read().await;
+                                        fire_event(&store, &info_for_notif, ProcessEvent::Restarted).await;
+                                    });
                                     let restart_count = { arc.read().await.restart_count };
                                     tokio::spawn(async move {
                                         wait_for_exit(child, exit_tx).await;
@@ -457,6 +489,12 @@ impl ProcessManager {
                                     if let Some(arc_entry) = registry2.get(&process_id) {
                                         let mut proc = arc_entry.write().await;
                                         proc.status = ProcessStatus::Errored;
+                                        let info_for_notif = proc.to_info();
+                                        let notif2 = Arc::clone(&notifications);
+                                        tokio::spawn(async move {
+                                            let store = notif2.read().await;
+                                            fire_event(&store, &info_for_notif, ProcessEvent::Crashed).await;
+                                        });
                                     }
                                 }
                             }
@@ -484,17 +522,26 @@ impl ProcessManager {
                 }
 
                 RestartEvent::MaxRestartsReached { process_id, exit_code } => {
+                    let notifications = Arc::clone(&notifications);
                     if let Some(arc) = registry.get(&process_id) {
-                        let mut proc = arc.write().await;
-                        proc.status = ProcessStatus::Errored;
-                        proc.pid = None;
-                        proc.last_exit_code = exit_code;
-                        proc.stopped_at = Some(Utc::now());
-                        tracing::warn!(
-                            "process '{}' reached max restarts ({})",
-                            proc.config.name,
-                            proc.config.max_restarts
-                        );
+                        let info_for_notif = {
+                            let mut proc = arc.write().await;
+                            proc.status = ProcessStatus::Errored;
+                            proc.pid = None;
+                            proc.last_exit_code = exit_code;
+                            proc.stopped_at = Some(Utc::now());
+                            tracing::warn!(
+                                "process '{}' reached max restarts ({})",
+                                proc.config.name,
+                                proc.config.max_restarts
+                            );
+                            proc.to_info()
+                        };
+                        let notif2 = Arc::clone(&notifications);
+                        tokio::spawn(async move {
+                            let store = notif2.read().await;
+                            fire_event(&store, &info_for_notif, ProcessEvent::Crashed).await;
+                        });
                     }
                 }
             }
@@ -507,6 +554,7 @@ impl ProcessManager {
         mut rx: mpsc::Receiver<Uuid>,
         cron_schedulers: Arc<Mutex<HashMap<Uuid, CronScheduler>>>,
         cron_trigger_tx: mpsc::Sender<Uuid>,
+        notifications: Arc<RwLock<NotificationsStore>>,
     ) {
         while let Some(process_id) = rx.recv().await {
             if let Some(arc) = registry.get(&process_id) {
@@ -514,6 +562,7 @@ impl ProcessManager {
                 let cron_schedulers = Arc::clone(&cron_schedulers);
                 let trigger_tx = cron_trigger_tx.clone();
 
+                let notif_cron = Arc::clone(&notifications);
                 tokio::spawn(async move {
                     let config = {
                         let proc = arc.read().await;
@@ -600,11 +649,18 @@ impl ProcessManager {
                     ).await {
                         Ok(child) => {
                             let pid = child.id();
-                            {
+                            let info_for_notif = {
                                 let mut proc = arc.write().await;
                                 proc.pid = pid;
                                 proc.status = ProcessStatus::Running;
-                            }
+                                proc.to_info()
+                            };
+                            // Fire Started notification for cron job (non-blocking)
+                            let notif3 = Arc::clone(&notif_cron);
+                            tokio::spawn(async move {
+                                let store = notif3.read().await;
+                                fire_event(&store, &info_for_notif, ProcessEvent::Started).await;
+                            });
 
                             let restart_count = { arc.read().await.restart_count };
                             tokio::spawn(async move {
@@ -632,8 +688,16 @@ impl ProcessManager {
                         }
                         Err(e) => {
                             tracing::error!("cron: failed to spawn process {process_id}: {e}");
-                            let mut proc = arc.write().await;
-                            proc.status = ProcessStatus::Errored;
+                            let info_for_notif = {
+                                let mut proc = arc.write().await;
+                                proc.status = ProcessStatus::Errored;
+                                proc.to_info()
+                            };
+                            let notif3 = Arc::clone(&notif_cron);
+                            tokio::spawn(async move {
+                                let store = notif3.read().await;
+                                fire_event(&store, &info_for_notif, ProcessEvent::Crashed).await;
+                            });
                         }
                     }
                 });

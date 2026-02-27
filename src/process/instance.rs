@@ -102,6 +102,8 @@ impl ManagedProcess {
             cron_run_history: self.cron_run_history.clone(),
             cpu_percent: self.cpu_percent,
             memory_bytes: self.memory_bytes,
+            env: self.config.env.clone(),
+            notify: self.config.notify.clone(),
         }
     }
 }

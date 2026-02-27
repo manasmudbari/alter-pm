@@ -142,7 +142,7 @@ pub struct DaemonArgs {
 pub enum DaemonAction {
     /// Start the daemon in the background
     Start {
-        #[arg(long, default_value = "2999")]
+        #[arg(long, default_value = "2999", env = "ALTER_PORT")]
         port: u16,
     },
     /// Stop the running daemon

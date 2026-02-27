@@ -21,6 +21,8 @@ pub struct StartRequest {
     pub max_log_size_mb: Option<u64>,
     /// Cron expression for scheduled execution (e.g. "0 * * * *")
     pub cron: Option<String>,
+    /// Process-level notification override
+    pub notify: Option<crate::models::notification::NotificationConfig>,
 }
 
 // @group Types > Request : Load an ecosystem config file

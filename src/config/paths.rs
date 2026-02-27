@@ -3,20 +3,32 @@
 use std::path::PathBuf;
 
 pub fn data_dir() -> PathBuf {
+    // ALTER_DATA_DIR_SUFFIX lets alternate builds (e.g. alter-dev) use an isolated data directory.
+    #[cfg(target_os = "windows")]
+    let default_suffix = "alter-pm2";
+    #[cfg(not(target_os = "windows"))]
+    let default_suffix = ".alter-pm2";
+
+    let suffix = std::env::var("ALTER_DATA_DIR_SUFFIX").unwrap_or_else(|_| default_suffix.to_string());
+
     #[cfg(target_os = "windows")]
     {
         let base = dirs::data_dir()
             .unwrap_or_else(|| PathBuf::from("C:\\Users\\Default\\AppData\\Roaming"));
-        base.join("alter-pm2")
+        base.join(suffix)
     }
     #[cfg(not(target_os = "windows"))]
     {
         let base = dirs::home_dir().unwrap_or_else(|| PathBuf::from("/tmp"));
-        base.join(".alter-pm2")
+        base.join(suffix)
     }
 }
 
 pub fn log_dir() -> PathBuf {
+    // ALTER_LOG_DIR fully overrides the log directory path.
+    if let Ok(custom) = std::env::var("ALTER_LOG_DIR") {
+        return PathBuf::from(custom);
+    }
     data_dir().join("logs")
 }
 

@@ -46,6 +46,9 @@ pub struct AppConfig {
     pub cron: Option<String>,
     pub cron_last_run: Option<DateTime<Utc>>,
     pub cron_next_run: Option<DateTime<Utc>>,
+    /// Process-level notification override (takes priority over namespace and global)
+    #[serde(default)]
+    pub notify: Option<crate::models::notification::NotificationConfig>,
 }
 
 fn default_namespace() -> String { "default".to_string() }
