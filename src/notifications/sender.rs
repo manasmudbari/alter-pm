@@ -9,28 +9,36 @@ use serde_json::{json, Value};
 // @group Types > ProcessEvent : Lifecycle event that can trigger a notification
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProcessEvent {
+    // Process lifecycle
     Started,
     Stopped,
     Crashed,
     Restarted,
+    // Cron lifecycle
+    CronRun,
+    CronFailed,
 }
 
 impl ProcessEvent {
     pub fn label(self) -> &'static str {
         match self {
-            ProcessEvent::Started   => "started",
-            ProcessEvent::Stopped   => "stopped",
-            ProcessEvent::Crashed   => "crashed",
-            ProcessEvent::Restarted => "restarted",
+            ProcessEvent::Started    => "started",
+            ProcessEvent::Stopped    => "stopped",
+            ProcessEvent::Crashed    => "crashed",
+            ProcessEvent::Restarted  => "restarted",
+            ProcessEvent::CronRun    => "cron_run",
+            ProcessEvent::CronFailed => "cron_failed",
         }
     }
 
     pub fn emoji(self) -> &'static str {
         match self {
-            ProcessEvent::Started   => "🟢",
-            ProcessEvent::Stopped   => "⚪",
-            ProcessEvent::Crashed   => "🔴",
-            ProcessEvent::Restarted => "🔄",
+            ProcessEvent::Started    => "🟢",
+            ProcessEvent::Stopped    => "⚪",
+            ProcessEvent::Crashed    => "🔴",
+            ProcessEvent::Restarted  => "🔄",
+            ProcessEvent::CronRun    => "⏰",
+            ProcessEvent::CronFailed => "❌",
         }
     }
 }
@@ -44,10 +52,12 @@ pub async fn fire_event(store: &NotificationsStore, proc: &ProcessInfo, event: P
 
     // Check event flag
     let should_fire = match event {
-        ProcessEvent::Started   => effective.events.on_start,
-        ProcessEvent::Stopped   => effective.events.on_stop,
-        ProcessEvent::Crashed   => effective.events.on_crash,
-        ProcessEvent::Restarted => effective.events.on_restart,
+        ProcessEvent::Started    => effective.events.on_start,
+        ProcessEvent::Stopped    => effective.events.on_stop,
+        ProcessEvent::Crashed    => effective.events.on_crash,
+        ProcessEvent::Restarted  => effective.events.on_restart,
+        ProcessEvent::CronRun    => effective.events.on_cron_run,
+        ProcessEvent::CronFailed => effective.events.on_cron_fail,
     };
 
     if !should_fire {
@@ -92,6 +102,7 @@ fn merge_configs(
         .iter()
         .find(|c| {
             c.events.on_crash || c.events.on_restart || c.events.on_start || c.events.on_stop
+                || c.events.on_cron_run || c.events.on_cron_fail
         })
         .map(|c| c.events.clone())
         .unwrap_or_default();
@@ -127,10 +138,12 @@ async fn send_webhook(client: &reqwest::Client, wh: &WebhookTarget, proc: &Proce
 // @group BusinessLogic > SendSlack : POST Slack-formatted message card
 async fn send_slack(client: &reqwest::Client, sl: &SlackTarget, proc: &ProcessInfo, event: ProcessEvent) {
     let color = match event {
-        ProcessEvent::Started   => "#36a64f",
-        ProcessEvent::Stopped   => "#aaaaaa",
-        ProcessEvent::Crashed   => "#ff0000",
-        ProcessEvent::Restarted => "#f0ad4e",
+        ProcessEvent::Started    => "#36a64f",
+        ProcessEvent::Stopped    => "#aaaaaa",
+        ProcessEvent::Crashed    => "#ff0000",
+        ProcessEvent::Restarted  => "#f0ad4e",
+        ProcessEvent::CronRun    => "#fbbf24",
+        ProcessEvent::CronFailed => "#ef4444",
     };
 
     let text = format!("{} *{}* {}", event.emoji(), proc.name, event.label());
@@ -170,10 +183,12 @@ async fn send_teams(client: &reqwest::Client, tm: &TeamsTarget, proc: &ProcessIn
         "@context":   "http://schema.org/extensions",
         "summary":    &summary,
         "themeColor": match event {
-            ProcessEvent::Crashed   => "FF0000",
-            ProcessEvent::Started   => "36a64f",
-            ProcessEvent::Restarted => "f0ad4e",
-            ProcessEvent::Stopped   => "aaaaaa",
+            ProcessEvent::Crashed    => "FF0000",
+            ProcessEvent::Started    => "36a64f",
+            ProcessEvent::Restarted  => "f0ad4e",
+            ProcessEvent::Stopped    => "aaaaaa",
+            ProcessEvent::CronRun    => "fbbf24",
+            ProcessEvent::CronFailed => "ef4444",
         },
         "title": format!("{} {}", event.emoji(), &summary),
         "sections": [{

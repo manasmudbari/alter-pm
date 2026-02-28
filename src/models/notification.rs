@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 // @group Types > NotificationEvents : Which process lifecycle events trigger notifications
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct NotificationEvents {
+    // Process lifecycle events
     #[serde(default)]
     pub on_crash: bool,
     #[serde(default)]
@@ -13,6 +14,11 @@ pub struct NotificationEvents {
     pub on_start: bool,
     #[serde(default)]
     pub on_stop: bool,
+    // Cron job lifecycle events
+    #[serde(default)]
+    pub on_cron_run: bool,
+    #[serde(default)]
+    pub on_cron_fail: bool,
 }
 
 // @group Types > WebhookTarget : Generic HTTP webhook target
