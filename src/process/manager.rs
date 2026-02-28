@@ -102,6 +102,67 @@ impl ProcessManager {
         info
     }
 
+    // @group BusinessLogic > Lifecycle : Re-adopt an already-running OS process after a daemon crash.
+    // We cannot re-attach stdout/stderr — logs resume on the next natural restart.
+    // A polling watcher detects when the PID exits and fires a RestartEvent so the
+    // normal restart_loop handles autorestart from that point forward.
+    pub async fn register_running_adopted(&self, config: AppConfig, pid: u32) -> ProcessInfo {
+        let mut process = ManagedProcess::new(config.clone());
+        process.status = ProcessStatus::Running;
+        process.pid = Some(pid);
+        process.started_at = Some(Utc::now()); // approximate — original start time is unknown
+
+        let id = process.id;
+        let info = process.to_info();
+        let arc = Arc::new(RwLock::new(process));
+        self.registry.insert(id, Arc::clone(&arc));
+
+        // @group BusinessLogic > AdoptedWatcher : Poll every 2s until the adopted PID exits
+        let registry = Arc::clone(&self.registry);
+        let restart_tx = self.restart_tx.clone();
+
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                if !is_pid_alive(pid) {
+                    break;
+                }
+            }
+
+            // PID exited — update state and decide whether to restart
+            let (autorestart, restart_count, max_restarts, restart_delay_ms) = {
+                match registry.get(&id) {
+                    Some(entry) => {
+                        let mut proc = entry.write().await;
+                        proc.status = ProcessStatus::Stopped;
+                        proc.pid = None;
+                        proc.stopped_at = Some(Utc::now());
+                        (
+                            proc.config.autorestart,
+                            proc.restart_count,
+                            proc.config.max_restarts,
+                            proc.config.restart_delay_ms,
+                        )
+                    }
+                    None => return,
+                }
+            };
+
+            if autorestart && restart_count < max_restarts {
+                tokio::time::sleep(tokio::time::Duration::from_millis(restart_delay_ms)).await;
+                let _ = restart_tx
+                    .send(RestartEvent::Restart { process_id: id })
+                    .await;
+            } else {
+                let _ = restart_tx
+                    .send(RestartEvent::Exited { process_id: id, exit_code: None })
+                    .await;
+            }
+        });
+
+        info
+    }
+
     // @group BusinessLogic > Lifecycle : Register a cron process as Sleeping without spawning (used on restore)
     pub async fn register_sleeping(&self, config: AppConfig, cron_run_history: Vec<CronRun>) -> Result<ProcessInfo> {
         let mut process = ManagedProcess::new(config.clone());
@@ -145,6 +206,20 @@ impl ProcessManager {
         }
 
         proc.status = ProcessStatus::Stopping;
+
+        // @group BusinessLogic > HealthCheck : Abort health check loop before killing the process
+        if let Some(handle) = proc.health_check_handle.take() {
+            handle.abort();
+        }
+
+        // @group BusinessLogic > Hooks : Run pre_stop hook before killing the process
+        if let Some(cmd) = &proc.config.pre_stop.clone() {
+            let cwd = proc.config.cwd.clone();
+            let env = proc.config.env.clone();
+            if let Err(e) = crate::process::hooks::run_hook(cmd, cwd.as_deref(), &env).await {
+                tracing::warn!("pre_stop hook failed: {e}");
+            }
+        }
 
         if let Some(pid) = proc.pid {
             kill_process(pid);
@@ -297,6 +372,8 @@ impl ProcessManager {
             proc.started_at = Some(Utc::now());
             proc.stopped_at = None;
             proc.cron_next_run = None;
+            // Reset health status on each (re)spawn
+            proc.health_status = None;
 
             // Open / rotate log files
             let log_dir = crate::config::paths::process_log_dir(&proc.config.name);
@@ -307,6 +384,20 @@ impl ProcessManager {
             (proc.config.clone(), proc.log_tx.clone())
         };
 
+        // @group BusinessLogic > Hooks : Run pre_start hook before spawning
+        if let Some(cmd) = &config.pre_start {
+            crate::process::hooks::run_hook(cmd, config.cwd.as_deref(), &config.env)
+                .await
+                .map_err(|e| anyhow::anyhow!("pre_start hook failed: {e}"))?;
+        }
+
+        // @group BusinessLogic > EnvFile : Merge .env file vars with explicit env (explicit wins)
+        let merged_env = crate::config::env_file::merge_env(
+            config.env_file.as_deref(),
+            config.cwd.as_deref(),
+            &config.env,
+        ).unwrap_or_else(|_| config.env.clone());
+
         let (exit_tx, exit_rx) = mpsc::channel::<crate::process::runner::RunResult>(1);
 
         let child = spawn_process(
@@ -314,7 +405,7 @@ impl ProcessManager {
             &config.script,
             &config.args,
             config.cwd.as_deref(),
-            &config.env,
+            &merged_env,
             log_tx,
             exit_tx.clone(),
         )
@@ -341,6 +432,17 @@ impl ProcessManager {
             let store = notif.read().await;
             fire_event(&store, &info_for_notif, ProcessEvent::Started).await;
         });
+
+        // @group BusinessLogic > Hooks : Run post_start hook after process is running (non-blocking)
+        if let Some(cmd) = config.post_start.clone() {
+            let cwd = config.cwd.clone();
+            let env = config.env.clone();
+            tokio::spawn(async move {
+                if let Err(e) = crate::process::hooks::run_hook(&cmd, cwd.as_deref(), &env).await {
+                    tracing::warn!("post_start hook failed: {e}");
+                }
+            });
+        }
 
         // For cron jobs we force autorestart=false so watch_and_restart just fires Exited.
         // The cron_trigger_loop handles re-spawning on the next tick.
@@ -370,6 +472,20 @@ impl ProcessManager {
             exit_rx,
             rtx,
         ));
+
+        // @group BusinessLogic > HealthCheck : Start health probe loop if configured
+        if let Some(url) = &config.health_check_url {
+            let handle = crate::process::health::start_health_check(
+                id,
+                Arc::clone(&arc),
+                url.clone(),
+                config.health_check_interval_secs,
+                config.health_check_timeout_secs,
+                config.health_check_retries,
+                Arc::clone(&self.notifications),
+            );
+            arc.write().await.health_check_handle = Some(handle);
+        }
 
         // Start file watcher if watch mode is enabled
         if config.watch && !config.watch_paths.is_empty() {
@@ -443,12 +559,19 @@ impl ProcessManager {
 
                             let (exit_tx, exit_rx) = mpsc::channel::<crate::process::runner::RunResult>(1);
 
+                            // @group BusinessLogic > EnvFile : Merge .env on each restart
+                            let merged_env = crate::config::env_file::merge_env(
+                                config.env_file.as_deref(),
+                                config.cwd.as_deref(),
+                                &config.env,
+                            ).unwrap_or_else(|_| config.env.clone());
+
                             match spawn_process(
                                 process_id,
                                 &config.script,
                                 &config.args,
                                 config.cwd.as_deref(),
-                                &config.env,
+                                &merged_env,
                                 log_tx,
                                 exit_tx.clone(),
                             ).await {
@@ -457,6 +580,7 @@ impl ProcessManager {
                                     let info_for_notif = {
                                         let mut proc = arc.write().await;
                                         proc.pid = pid;
+                                        proc.health_status = None;
                                         proc.status = if config.watch {
                                             ProcessStatus::Watching
                                         } else {
@@ -638,12 +762,19 @@ impl ProcessManager {
                         }
                     });
 
+                    // @group BusinessLogic > EnvFile : Merge .env for cron spawn
+                    let merged_env = crate::config::env_file::merge_env(
+                        config.env_file.as_deref(),
+                        config.cwd.as_deref(),
+                        &config.env,
+                    ).unwrap_or_else(|_| config.env.clone());
+
                     match spawn_process(
                         process_id,
                         &config.script,
                         &config.args,
                         config.cwd.as_deref(),
-                        &config.env,
+                        &merged_env,
                         log_tx,
                         exit_tx.clone(),
                     ).await {
@@ -756,6 +887,30 @@ impl ProcessManager {
             .get(&id)
             .map(|e| Arc::clone(e.value()))
             .ok_or_else(|| anyhow!("process not found: {id}"))
+    }
+}
+
+// @group Utilities : Check whether a PID is still alive in the OS process table
+pub fn is_pid_alive(pid: u32) -> bool {
+    use sysinfo::{Pid, System};
+    let mut sys = System::new();
+    sys.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[Pid::from_u32(pid)]), false);
+    sys.process(Pid::from_u32(pid)).is_some()
+}
+
+// @group Utilities : Kill a single orphaned process by PID (used when re-adopting on daemon restart)
+pub fn kill_orphan_pid(pid: u32) {
+    #[cfg(target_os = "windows")]
+    {
+        let _ = std::process::Command::new("taskkill")
+            .args(["/PID", &pid.to_string(), "/T", "/F"])
+            .output();
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        unsafe {
+            libc::kill(pid as i32, libc::SIGTERM);
+        }
     }
 }
 
