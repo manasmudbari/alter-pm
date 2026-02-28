@@ -127,9 +127,15 @@ pub struct LogsArgs {
     /// Stream new log lines in real-time
     #[arg(long, short)]
     pub follow: bool,
-    /// Show stderr instead of stdout
-    #[arg(long)]
+    /// Show only stderr
+    #[arg(long, conflicts_with = "out")]
     pub err: bool,
+    /// Show only stdout
+    #[arg(long, conflicts_with = "err")]
+    pub out: bool,
+    /// Filter lines to those containing this string (case-insensitive)
+    #[arg(long, short = 'g')]
+    pub grep: Option<String>,
 }
 
 #[derive(Args, Debug)]

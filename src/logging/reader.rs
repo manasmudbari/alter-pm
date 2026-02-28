@@ -23,8 +23,9 @@ pub fn read_last_lines(path: &Path, n: usize) -> Result<Vec<String>> {
 }
 
 /// Read both out.log and err.log, merge, sort by timestamp, return the last `n` lines.
+/// Returns tuples of (stream, timestamp, content).
 /// This is today's live logs (current files only).
-pub fn read_merged_logs(log_dir: &Path, n: usize) -> Result<Vec<(String, String)>> {
+pub fn read_merged_logs(log_dir: &Path, n: usize) -> Result<Vec<(String, String, String)>> {
     read_merged_logs_for_paths(
         &log_dir.join("out.log"),
         &log_dir.join("err.log"),
@@ -34,12 +35,12 @@ pub fn read_merged_logs(log_dir: &Path, n: usize) -> Result<Vec<(String, String)
 
 /// Read logs for a specific date from the dated rotation files:
 ///   out.log.YYYY-MM-DD  /  err.log.YYYY-MM-DD
-/// Returns merged lines sorted by timestamp.
+/// Returns merged lines sorted by timestamp as (stream, timestamp, content).
 pub fn read_merged_logs_for_date(
     log_dir: &Path,
     date: NaiveDate,
     n: usize,
-) -> Result<Vec<(String, String)>> {
+) -> Result<Vec<(String, String, String)>> {
     let date_str = date.format("%Y-%m-%d").to_string();
     let out_path = log_dir.join(format!("out.log.{date_str}"));
     let err_path = log_dir.join(format!("err.log.{date_str}"));
@@ -70,22 +71,34 @@ pub fn list_log_dates(log_dir: &Path) -> Result<Vec<NaiveDate>> {
     Ok(dates)
 }
 
-// @group Utilities : Shared helper — merge stdout + stderr paths into sorted lines
+// @group Utilities : Extract [ISO8601] timestamp prefix from a disk log line
+fn parse_log_line(raw: &str) -> (String, String) {
+    // Disk format: [2026-02-28T14:23:45.123Z] actual content
+    if raw.starts_with('[') {
+        if let Some(end) = raw.find("] ") {
+            return (raw[1..end].to_string(), raw[end + 2..].to_string());
+        }
+    }
+    (String::new(), raw.to_string())
+}
+
+// @group Utilities : Shared helper — merge stdout + stderr paths into sorted (stream, timestamp, content) tuples
 
 fn read_merged_logs_for_paths(
     out_path: &Path,
     err_path: &Path,
     n: usize,
-) -> Result<Vec<(String, String)>> {
-    let mut entries: Vec<(String, String)> = Vec::new();
+) -> Result<Vec<(String, String, String)>> {
+    let mut entries: Vec<(String, String, String)> = Vec::new();
 
     for (path, stream) in [(out_path, "stdout"), (err_path, "stderr")] {
         for line in read_last_lines(path, n)? {
-            entries.push((stream.to_string(), line));
+            let (ts, content) = parse_log_line(&line);
+            entries.push((stream.to_string(), ts, content));
         }
     }
 
-    // Sort by the ISO timestamp prefix written by LogWriter: [YYYY-MM-DDTHH:MM:SS.sssZ]
+    // Sort by the ISO timestamp field (index 1)
     entries.sort_by(|a, b| a.1.cmp(&b.1));
 
     let start = entries.len().saturating_sub(n);
