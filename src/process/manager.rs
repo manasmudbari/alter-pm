@@ -93,9 +93,9 @@ impl ProcessManager {
     }
 
     // @group BusinessLogic > Lifecycle : Register a process as Stopped without spawning (used on restore)
-    pub async fn register_stopped(&self, config: AppConfig) -> ProcessInfo {
-        let process = ManagedProcess::new(config);
-        let id = process.id;
+    // Takes the persisted UUID so IDs remain stable across daemon restarts.
+    pub async fn register_stopped(&self, id: Uuid, config: AppConfig) -> ProcessInfo {
+        let process = ManagedProcess::new_with_id(id, config);
         let info = process.to_info();
         let arc = Arc::new(RwLock::new(process));
         self.registry.insert(id, arc);
@@ -106,8 +106,8 @@ impl ProcessManager {
     // We cannot re-attach stdout/stderr — logs resume on the next natural restart.
     // A polling watcher detects when the PID exits and fires a RestartEvent so the
     // normal restart_loop handles autorestart from that point forward.
-    pub async fn register_running_adopted(&self, config: AppConfig, pid: u32) -> ProcessInfo {
-        let mut process = ManagedProcess::new(config.clone());
+    pub async fn register_running_adopted(&self, saved_id: Uuid, config: AppConfig, pid: u32) -> ProcessInfo {
+        let mut process = ManagedProcess::new_with_id(saved_id, config.clone());
         process.status = ProcessStatus::Running;
         process.pid = Some(pid);
         process.started_at = Some(Utc::now()); // approximate — original start time is unknown
@@ -164,8 +164,8 @@ impl ProcessManager {
     }
 
     // @group BusinessLogic > Lifecycle : Register a cron process as Sleeping without spawning (used on restore)
-    pub async fn register_sleeping(&self, config: AppConfig, cron_run_history: Vec<CronRun>) -> Result<ProcessInfo> {
-        let mut process = ManagedProcess::new(config.clone());
+    pub async fn register_sleeping(&self, id: Uuid, config: AppConfig, cron_run_history: Vec<CronRun>) -> Result<ProcessInfo> {
+        let mut process = ManagedProcess::new_with_id(id, config.clone());
         process.status = ProcessStatus::Sleeping;
         process.cron_run_history = cron_run_history;
         if let Some(expr) = &config.cron {
@@ -731,8 +731,9 @@ impl ProcessManager {
                     let (local_restart_tx, mut local_restart_rx) =
                         mpsc::channel::<crate::process::restarter::RestartEvent>(4);
                     let arc2 = Arc::clone(&arc);
+                    let notif_exit = Arc::clone(&notif_cron);
 
-                    // Handle the exit event inline — record run history and transition to Sleeping
+                    // Handle the exit event inline — record run history, transition to Sleeping, fire CronFailed if needed
                     tokio::spawn(async move {
                         if let Some(event) = local_restart_rx.recv().await {
                             if let crate::process::restarter::RestartEvent::Exited { exit_code, .. } = event {
@@ -745,18 +746,29 @@ impl ProcessManager {
                                     exit_code,
                                     duration_secs,
                                 };
-                                let mut proc = arc2.write().await;
-                                proc.status = ProcessStatus::Sleeping;
-                                proc.pid = None;
-                                proc.last_exit_code = exit_code;
-                                proc.stopped_at = Some(finished_at);
-                                // Append to history, capped at MAX_CRON_HISTORY
-                                proc.cron_run_history.push(run);
-                                if proc.cron_run_history.len() > MAX_CRON_HISTORY {
-                                    proc.cron_run_history.remove(0);
-                                }
-                                if let Some(expr) = &proc.config.cron.clone() {
-                                    proc.cron_next_run = next_run(expr);
+                                let info_for_fail = {
+                                    let mut proc = arc2.write().await;
+                                    proc.status = ProcessStatus::Sleeping;
+                                    proc.pid = None;
+                                    proc.last_exit_code = exit_code;
+                                    proc.stopped_at = Some(finished_at);
+                                    // Append to history, capped at MAX_CRON_HISTORY
+                                    proc.cron_run_history.push(run);
+                                    if proc.cron_run_history.len() > MAX_CRON_HISTORY {
+                                        proc.cron_run_history.remove(0);
+                                    }
+                                    if let Some(expr) = &proc.config.cron.clone() {
+                                        proc.cron_next_run = next_run(expr);
+                                    }
+                                    // Capture info for notification (only needed if failed)
+                                    exit_code.map(|_| proc.to_info())
+                                };
+                                // Fire CronFailed notification on non-zero exit
+                                if let Some(false) = exit_code.map(|c| c == 0) {
+                                    if let Some(info) = info_for_fail {
+                                        let store = notif_exit.read().await;
+                                        fire_event(&store, &info, ProcessEvent::CronFailed).await;
+                                    }
                                 }
                             }
                         }
@@ -786,11 +798,11 @@ impl ProcessManager {
                                 proc.status = ProcessStatus::Running;
                                 proc.to_info()
                             };
-                            // Fire Started notification for cron job (non-blocking)
+                            // Fire CronRun notification when cron job starts (non-blocking)
                             let notif3 = Arc::clone(&notif_cron);
                             tokio::spawn(async move {
                                 let store = notif3.read().await;
-                                fire_event(&store, &info_for_notif, ProcessEvent::Started).await;
+                                fire_event(&store, &info_for_notif, ProcessEvent::CronRun).await;
                             });
 
                             let restart_count = { arc.read().await.restart_count };
@@ -827,7 +839,7 @@ impl ProcessManager {
                             let notif3 = Arc::clone(&notif_cron);
                             tokio::spawn(async move {
                                 let store = notif3.read().await;
-                                fire_event(&store, &info_for_notif, ProcessEvent::Crashed).await;
+                                fire_event(&store, &info_for_notif, ProcessEvent::CronFailed).await;
                             });
                         }
                     }

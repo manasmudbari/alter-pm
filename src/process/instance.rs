@@ -55,9 +55,14 @@ pub struct ManagedProcess {
 
 impl ManagedProcess {
     pub fn new(config: AppConfig) -> Self {
+        Self::new_with_id(Uuid::new_v4(), config)
+    }
+
+    /// Restore a process with its persisted UUID so IDs remain stable across daemon restarts.
+    pub fn new_with_id(id: Uuid, config: AppConfig) -> Self {
         let (log_tx, _) = broadcast::channel(1024);
         Self {
-            id: Uuid::new_v4(),
+            id,
             config,
             status: ProcessStatus::Stopped,
             pid: None,
