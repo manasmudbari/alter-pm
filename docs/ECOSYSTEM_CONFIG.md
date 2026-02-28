@@ -124,6 +124,14 @@ TZ = "UTC"
 | `log_file` | string | no | auto | Custom path for stdout log. Defaults to `%APPDATA%\alter-pm2\logs\<name>\out.log` |
 | `error_file` | string | no | auto | Custom path for stderr log. Defaults to `%APPDATA%\alter-pm2\logs\<name>\err.log` |
 | `notify` | object | no | null | Per-process notification config override (see [Notifications](#notifications)) |
+| `env_file` | string | no | null | Path to a `.env` file — loaded and merged with `env` (explicit `env` wins on conflict) |
+| `health_check_url` | string | no | null | HTTP (`http://...`) or TCP (`host:port`) probe URL for health checks |
+| `health_check_interval_secs` | integer | no | `30` | Seconds between health probes |
+| `health_check_timeout_secs` | integer | no | `5` | Seconds before a probe times out |
+| `health_check_retries` | integer | no | `3` | Consecutive failures before marking as unhealthy and firing a notification |
+| `pre_start` | string | no | null | Shell command to run before the process starts (blocks start on failure) |
+| `post_start` | string | no | null | Shell command to run after the process starts (non-blocking, failures are logged) |
+| `pre_stop` | string | no | null | Shell command to run before the process is killed (failures are logged) |
 
 ---
 
@@ -293,6 +301,82 @@ alter start ./alter.config.json
 > alter detects config files by their extension (`.toml` or `.json`). Any other value is treated as a script to run directly.
 
 After loading, each app appears as a separate process in `alter list` and the web dashboard, with its own logs, restart counter, and controls.
+
+---
+
+## .env File Support
+
+Use `env_file` to load environment variables from a `.env` file. Values are merged with explicit `env` — explicit `env` keys always win on conflict.
+
+```toml
+[[apps]]
+name     = "api"
+script   = "python"
+args     = ["-m", "uvicorn", "main:app"]
+cwd      = "C:/projects/api"
+env_file = ".env"           # relative to cwd, or absolute path
+
+[apps.env]
+PORT = "9000"               # this overrides PORT from .env if both exist
+```
+
+The `.env` file uses standard `KEY=VALUE` format with comment support:
+
+```dotenv
+DATABASE_URL=postgres://localhost/mydb
+SECRET_KEY=supersecret
+PORT=8000
+# This is a comment
+DEBUG=false
+```
+
+---
+
+## Health Checks
+
+Use `health_check_url` to probe your process after it starts. Supports HTTP/HTTPS (checks for 2xx) and raw TCP (checks for successful connection).
+
+```toml
+[[apps]]
+name                     = "api"
+script                   = "python"
+args                     = ["-m", "uvicorn", "main:app", "--port", "8000"]
+health_check_url         = "http://localhost:8000/health"
+health_check_interval_secs = 30    # probe every 30s (default)
+health_check_timeout_secs  = 5     # timeout per probe (default)
+health_check_retries       = 3     # failures before marking unhealthy (default)
+```
+
+TCP probe example (useful for databases, Redis, etc.):
+
+```toml
+health_check_url = "localhost:5432"   # just host:port for TCP
+```
+
+When `health_check_retries` consecutive probes fail, the process is marked `unhealthy` and a notification is fired (if configured). The status recovers automatically when probes succeed again.
+
+---
+
+## Lifecycle Hooks
+
+Run shell commands at key lifecycle events. On Windows, hooks run via `cmd /C`. On Linux/macOS via `sh -c`.
+
+```toml
+[[apps]]
+name      = "api"
+script    = "node"
+args      = ["dist/index.js"]
+cwd       = "C:/projects/api"
+pre_start = "npm run db:migrate"         # blocks start — failure aborts launch
+post_start = "echo 'api is up' >> app.log"  # non-blocking after process starts
+pre_stop  = "npm run cleanup"            # runs before process is killed
+```
+
+| Hook | When | Failure behaviour |
+|------|------|-------------------|
+| `pre_start` | Before spawning the process | **Aborts** the start — process is not launched |
+| `post_start` | After process reaches `running` state | Logged as a warning, process keeps running |
+| `pre_stop` | Before killing the process | Logged as a warning, process is killed anyway |
 
 ---
 

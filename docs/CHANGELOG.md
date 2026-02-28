@@ -27,13 +27,34 @@ Format: `[version] — YYYY-MM-DD` with sections: **Added**, **Changed**, **Fixe
   - `g` chord: press `g` then a second key within 1s to navigate: `g p` → Processes, `g h` → Home, `g s` → Settings, `g n` → Start, `g c` → Cron Jobs
 - In-app activity tray for live notification event feed
 
+**Health checks**
+- HTTP probe: GET to `health_check_url`, passes on 2xx response
+- TCP probe: connect to `host:port`, passes on successful connection
+- Configurable `health_check_interval_secs` (default 30), `health_check_timeout_secs` (default 5), `health_check_retries` (default 3)
+- Fires a `Crashed` notification when consecutive failures exceed `health_check_retries`
+- Health status recovers automatically when probes succeed again
+- Probe loop is aborted cleanly when the process is stopped
+
+**Lifecycle hooks**
+- `pre_start`: shell command run before spawning — failure aborts the launch
+- `post_start`: shell command run after process reaches running state — non-blocking, failures logged
+- `pre_stop`: shell command run before killing the process — failures logged, kill proceeds anyway
+- Windows: hooks run via `cmd /C`; Linux/macOS via `sh -c`
+
+**`.env` file support**
+- `env_file` field in ecosystem config and API — path to a `.env` file (relative to `cwd` or absolute)
+- Variables merged with explicit `env` — explicit `env` wins on conflict
+- Missing file logs a warning and continues without error
+- Applied at every spawn (initial start, restart, cron trigger)
+
+**Prometheus metrics**
+- `GET /api/v1/metrics` — standard Prometheus text exposition format
+- Metrics: `alter_process_cpu_percent`, `alter_process_memory_bytes`, `alter_process_restart_count`, `alter_process_uptime_seconds`, `alter_process_status`, `alter_daemon_uptime_seconds`, `alter_daemon_process_count`
+- All process metrics labelled with `name` and `namespace`
+
 **Coming in a future release** *(code committed, not yet active in the binary)*
-- Health checks: HTTP and TCP probes per process with configurable interval, timeout, and retry count
-- Lifecycle hooks: `pre_start`, `post_start`, `pre_stop` shell commands per process
 - Dependency resolution: `depends_on` — wait for upstream processes to be running/healthy before starting
 - Rolling restart: zero-downtime restart for multi-instance processes
-- `.env` file support: `env_file` field in ecosystem config loads `.env` files per process
-- Prometheus metrics: `GET /metrics` in Prometheus text exposition format
 
 ### Changed
 
