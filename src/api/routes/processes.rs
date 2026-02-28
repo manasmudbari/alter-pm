@@ -28,8 +28,16 @@ pub fn router(state: Arc<DaemonState>) -> Router {
         .route("/{id}/logs/dates", get(get_log_dates))
         .route("/{id}/logs/stream", get(stream_logs))
         .route("/{id}/cron/history", get(get_cron_history))
+        .route("/{id}/envfiles", get(list_envfiles))
         .route("/{id}/envfile", get(get_envfile).put(put_envfile))
         .with_state(state)
+}
+
+// @group Utilities > EnvFiles : Env filename validator (mirrors system.rs)
+fn is_env_filename(name: &str) -> bool {
+    name == ".env"
+        || name.starts_with(".env.")
+        || (name.ends_with(".env") && name.len() > 4)
 }
 
 // @group APIEndpoints > Process : GET /processes
@@ -364,28 +372,50 @@ async fn delete_logs(
     Ok(Json(json!({ "success": true, "message": "logs deleted" })))
 }
 
-// @group APIEndpoints > EnvFile : GET /processes/:id/envfile — read .env file from process cwd
-async fn get_envfile(
+// @group APIEndpoints > EnvFile : GET /processes/:id/envfiles — list all env files in process cwd
+async fn list_envfiles(
     State(state): State<Arc<DaemonState>>,
     Path(id_str): Path<String>,
 ) -> Result<Json<Value>, ApiError> {
     let id = resolve(&state, &id_str).await?;
     let info = state.manager.get(id).await.map_err(ApiError::from)?;
     let cwd = info.cwd.as_deref().unwrap_or(".");
-    let env_path = std::path::Path::new(cwd).join(".env");
+    let files = crate::api::routes::system::list_env_files_in(cwd);
+    let result: Vec<Value> = files
+        .into_iter()
+        .map(|(name, path)| json!({ "name": name, "path": path }))
+        .collect();
+    Ok(Json(json!({ "files": result })))
+}
+
+// @group APIEndpoints > EnvFile : GET /processes/:id/envfile?filename=.env — read env file from process cwd
+async fn get_envfile(
+    State(state): State<Arc<DaemonState>>,
+    Path(id_str): Path<String>,
+    axum::extract::Query(params): axum::extract::Query<HashMap<String, String>>,
+) -> Result<Json<Value>, ApiError> {
+    let id = resolve(&state, &id_str).await?;
+    let info = state.manager.get(id).await.map_err(ApiError::from)?;
+    let cwd = info.cwd.as_deref().unwrap_or(".");
+    let filename = params.get("filename").map(|s| s.as_str()).unwrap_or(".env");
+    if !is_env_filename(filename) {
+        return Err(ApiError::bad_request("invalid env filename"));
+    }
+    let env_path = std::path::Path::new(cwd).join(filename);
 
     if !env_path.exists() {
-        return Ok(Json(json!({ "content": "", "exists": false })));
+        return Ok(Json(json!({ "content": "", "exists": false, "filename": filename })));
     }
 
     let content = tokio::fs::read_to_string(&env_path)
         .await
-        .map_err(|e| ApiError::internal(format!("failed to read .env file: {e}")))?;
+        .map_err(|e| ApiError::internal(format!("failed to read env file: {e}")))?;
 
-    Ok(Json(json!({ "content": content, "exists": true })))
+    Ok(Json(json!({ "content": content, "exists": true, "filename": filename })))
 }
 
-// @group APIEndpoints > EnvFile : PUT /processes/:id/envfile — write .env file to process cwd
+// @group APIEndpoints > EnvFile : PUT /processes/:id/envfile — write env file to process cwd
+// Body: { content, filename? } — filename defaults to ".env"
 async fn put_envfile(
     State(state): State<Arc<DaemonState>>,
     Path(id_str): Path<String>,
@@ -394,15 +424,19 @@ async fn put_envfile(
     let id = resolve(&state, &id_str).await?;
     let info = state.manager.get(id).await.map_err(ApiError::from)?;
     let cwd = info.cwd.as_deref().unwrap_or(".");
-    let env_path = std::path::Path::new(cwd).join(".env");
+    let filename = body["filename"].as_str().unwrap_or(".env");
+    if !is_env_filename(filename) {
+        return Err(ApiError::bad_request("invalid env filename"));
+    }
+    let env_path = std::path::Path::new(cwd).join(filename);
 
     let content = body["content"].as_str().unwrap_or("").to_string();
 
     tokio::fs::write(&env_path, content)
         .await
-        .map_err(|e| ApiError::internal(format!("failed to write .env file: {e}")))?;
+        .map_err(|e| ApiError::internal(format!("failed to write env file: {e}")))?;
 
-    Ok(Json(json!({ "success": true, "path": env_path.to_string_lossy() })))
+    Ok(Json(json!({ "success": true, "path": env_path.to_string_lossy(), "filename": filename })))
 }
 
 async fn resolve(state: &DaemonState, id_str: &str) -> Result<Uuid, ApiError> {
