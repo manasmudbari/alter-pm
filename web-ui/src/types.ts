@@ -2,10 +2,14 @@
 
 // @group Types > Notifications : Webhook / Slack / Teams notification config
 export interface NotificationEvents {
+  // Process lifecycle events
   on_crash: boolean
   on_restart: boolean
   on_start: boolean
   on_stop: boolean
+  // Cron job events
+  on_cron_run?: boolean
+  on_cron_fail?: boolean
 }
 
 export interface WebhookTarget {
@@ -118,4 +122,10 @@ export interface StartProcessBody {
   watch_paths?: string[]
   cron?: string
   notify?: NotificationConfig
+}
+
+// @group Types > EnvFiles : Env file descriptor from the API
+export interface EnvFileEntry {
+  name: string
+  path: string
 }

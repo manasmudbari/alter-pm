@@ -1,6 +1,6 @@
 // @group APIEndpoints : All fetch calls to the alter daemon REST API
 
-import type { CronRun, DaemonHealth, LogLine, NotificationConfig, NotificationsStore, ProcessInfo, ScriptInfo, StartProcessBody } from '@/types'
+import type { CronRun, DaemonHealth, EnvFileEntry, LogLine, NotificationConfig, NotificationsStore, ProcessInfo, ScriptInfo, StartProcessBody } from '@/types'
 
 const BASE = '/api/v1'
 
@@ -62,11 +62,28 @@ export const api = {
   deleteLogs: (id: string): Promise<{ success: boolean }> =>
     request(`/processes/${id}/logs`, { method: 'DELETE' }),
 
-  getEnvFile: (id: string): Promise<{ content: string; exists: boolean }> =>
-    request(`/processes/${id}/envfile`),
+  // @group APIEndpoints > EnvFiles : Process-scoped env file operations
+  listEnvFiles: (id: string): Promise<{ files: EnvFileEntry[] }> =>
+    request(`/processes/${id}/envfiles`),
 
-  saveEnvFile: (id: string, content: string): Promise<{ success: boolean; path: string }> =>
-    request(`/processes/${id}/envfile`, { method: 'PUT', body: JSON.stringify({ content }) }),
+  getEnvFile: (id: string, filename = '.env'): Promise<{ content: string; exists: boolean; filename: string }> =>
+    request(`/processes/${id}/envfile?filename=${encodeURIComponent(filename)}`),
+
+  saveEnvFile: (id: string, content: string, filename = '.env'): Promise<{ success: boolean; path: string; filename: string }> =>
+    request(`/processes/${id}/envfile`, { method: 'PUT', body: JSON.stringify({ content, filename }) }),
+
+  // @group APIEndpoints > EnvFiles : Path-scoped env file operations (for StartPage/EditPage)
+  listEnvPath: (dir: string): Promise<{ files: EnvFileEntry[] }> =>
+    request(`/system/list-env?path=${encodeURIComponent(dir)}`),
+
+  readEnvFile: (filePath: string): Promise<{ content: string; exists: boolean }> =>
+    request(`/system/read-env?path=${encodeURIComponent(filePath)}`),
+
+  writeEnvFile: (filePath: string, content: string): Promise<{ success: boolean; path: string }> =>
+    request('/system/write-env', { method: 'POST', body: JSON.stringify({ path: filePath, content }) }),
+
+  syncEnvFiles: (sourcePath: string): Promise<{ success: boolean; synced_files: number; errors?: string[] }> =>
+    request('/system/sync-env', { method: 'POST', body: JSON.stringify({ source_path: sourcePath }) }),
 
   getCronHistory: (id: string): Promise<{ runs: CronRun[] }> =>
     request(`/processes/${id}/cron/history`),
