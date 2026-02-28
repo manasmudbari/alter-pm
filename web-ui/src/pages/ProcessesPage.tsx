@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Play, Square, RotateCcw, ScrollText, Pencil, Trash2 } from 'lucide-react'
+import { Play, Square, RotateCcw, ScrollText, Pencil, Trash2, FileKey } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useDialog } from '@/hooks/useDialog'
 import { Dialog } from '@/components/Dialog'
+import { EnvFilePanel } from '@/components/EnvFilePanel'
 import { formatLastRun, formatNextRun, formatUptime, formatBytes, formatCpu, statusColor } from '@/lib/utils'
 import type { AppSettings } from '@/lib/settings'
 import type { ProcessInfo } from '@/types'
@@ -18,6 +19,7 @@ interface Props {
 
 export default function ProcessesPage({ processes, reload, settings }: Props) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const [envModalProcess, setEnvModalProcess] = useState<ProcessInfo | null>(null)
   const navigate = useNavigate()
   const { dialogState, confirm, danger, handleConfirm, handleCancel } = useDialog()
 
@@ -73,65 +75,90 @@ export default function ProcessesPage({ processes, reload, settings }: Props) {
         onCancel={handleCancel}
       />
 
-      <div style={{ padding: '16px 20px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)' }}>
-        <h2 style={{ fontSize: 16, fontWeight: 600 }}>Processes</h2>
-        <button onClick={reload} style={smallBtnStyle}>↻ Refresh</button>
-      </div>
+      {/* @group BusinessLogic > Layout : Two-column flex — table left, .env panel right */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
-      <div style={{ flex: 1, overflow: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead>
-            <tr style={{ background: 'var(--color-card)', borderBottom: '1px solid var(--color-border)' }}>
-              {['ID', 'Name', 'Status', 'PID', 'Uptime', 'CPU', 'Mem', 'Restarts', 'Mode', 'Next Run', 'Last Run', 'Actions'].map(h => (
-                <Th key={h}>{h}</Th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {sortedNs.map(ns => {
-              const procs = groups.get(ns)!
-              const isCollapsed = collapsed.has(ns)
-              const allActive = procs.every(p => p.status === 'running' || p.status === 'watching')
-              const allInactive = procs.every(p => p.status !== 'running' && p.status !== 'watching')
-              return [
-                // Namespace header row
-                <tr key={`ns-${ns}`}
-                  onClick={() => toggleNs(ns)}
-                  style={{ background: 'var(--color-muted)', cursor: 'pointer', userSelect: 'none' }}
-                >
-                  <td colSpan={12} style={{ padding: '6px 12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 10, color: 'var(--color-muted-foreground)' }}>{isCollapsed ? '▶' : '▼'}</span>
-                      <span style={{ fontWeight: 600, fontSize: 12 }}>{ns}</span>
-                      <span style={{ fontSize: 11, color: 'var(--color-muted-foreground)' }}>{procs.length} process{procs.length !== 1 ? 'es' : ''}</span>
-                      <span onClick={e => e.stopPropagation()} style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-                        {!allActive && <NsBtn label="▶ Start All" onClick={() => startAll(ns)} />}
-                        {!allInactive && <NsBtn label="■ Stop All" onClick={() => stopAll(ns)} danger />}
-                      </span>
-                    </div>
-                  </td>
-                </tr>,
-                // Process rows
-                ...(!isCollapsed ? procs.map(p => (
-                  <ProcessRow
-                    key={p.id} p={p} reload={reload}
-                    confirmDelete={settings.confirmBeforeDelete}
-                    onConfirm={confirm} onDanger={danger}
-                    onOpenDetail={() => navigate(`/processes/${p.id}`)}
-                    onEdit={() => navigate(`/edit/${p.id}`)}
-                  />
-                )) : []),
-              ]
-            })}
-          </tbody>
-        </table>
+        {/* Left column: header + scrollable process table */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600 }}>Processes</h2>
+            <button onClick={reload} style={smallBtnStyle}>↻ Refresh</button>
+          </div>
+
+          <div style={{ flex: 1, overflow: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: 'var(--color-card)', borderBottom: '1px solid var(--color-border)' }}>
+                  {['ID', 'Name', 'Status', 'PID', 'Uptime', 'CPU', 'Mem', 'Restarts', 'Mode', 'Next Run', 'Last Run', 'Actions'].map(h => (
+                    <Th key={h}>{h}</Th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sortedNs.map(ns => {
+                  const procs = groups.get(ns)!
+                  const isCollapsed = collapsed.has(ns)
+                  const allActive = procs.every(p => p.status === 'running' || p.status === 'watching')
+                  const allInactive = procs.every(p => p.status !== 'running' && p.status !== 'watching')
+                  return [
+                    // Namespace header row
+                    <tr key={`ns-${ns}`}
+                      onClick={() => toggleNs(ns)}
+                      style={{ background: 'var(--color-muted)', cursor: 'pointer', userSelect: 'none' }}
+                    >
+                      <td colSpan={12} style={{ padding: '6px 12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 10, color: 'var(--color-muted-foreground)' }}>{isCollapsed ? '▶' : '▼'}</span>
+                          <span style={{ fontWeight: 600, fontSize: 12 }}>{ns}</span>
+                          <span style={{ fontSize: 11, color: 'var(--color-muted-foreground)' }}>{procs.length} process{procs.length !== 1 ? 'es' : ''}</span>
+                          <span onClick={e => e.stopPropagation()} style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+                            {!allActive && <NsBtn label="▶ Start All" onClick={() => startAll(ns)} />}
+                            {!allInactive && <NsBtn label="■ Stop All" onClick={() => stopAll(ns)} danger />}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>,
+                    // Process rows
+                    ...(!isCollapsed ? procs.map(p => (
+                      <ProcessRow
+                        key={p.id} p={p} reload={reload}
+                        confirmDelete={settings.confirmBeforeDelete}
+                        onConfirm={confirm} onDanger={danger}
+                        onOpenDetail={() => navigate(`/processes/${p.id}`)}
+                        onEdit={() => navigate(`/edit/${p.id}`)}
+                        onOpenEnv={() => setEnvModalProcess(p)}
+                      />
+                    )) : []),
+                  ]
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Right column: .env editor panel — slides in when a row's .env button is clicked */}
+        {envModalProcess && (
+          <div style={{
+            width: 380, flexShrink: 0,
+            borderLeft: '1px solid var(--color-border)',
+            display: 'flex', flexDirection: 'column',
+          }}>
+            <EnvFilePanel
+              processId={envModalProcess.id}
+              processName={envModalProcess.name}
+              onClose={() => setEnvModalProcess(null)}
+              onRestart={reload}
+            />
+          </div>
+        )}
+
       </div>
     </div>
   )
 }
 
 // @group BusinessLogic > ProcessRow : Single process table row
-function ProcessRow({ p, reload, confirmDelete, onConfirm, onDanger, onOpenDetail, onEdit }: {
+function ProcessRow({ p, reload, confirmDelete, onConfirm, onDanger, onOpenDetail, onEdit, onOpenEnv }: {
   p: ProcessInfo
   reload: () => void
   confirmDelete: boolean
@@ -139,6 +166,7 @@ function ProcessRow({ p, reload, confirmDelete, onConfirm, onDanger, onOpenDetai
   onDanger: (title: string, message?: string, confirmLabel?: string) => Promise<boolean>
   onOpenDetail: () => void
   onEdit: () => void
+  onOpenEnv: () => void
 }) {
   const navigate = useNavigate()
   const isActive = p.status === 'running' || p.status === 'sleeping' || p.status === 'watching'
@@ -213,6 +241,7 @@ function ProcessRow({ p, reload, confirmDelete, onConfirm, onDanger, onOpenDetai
           }
           <ActionBtn label="Logs" icon={ScrollText} onClick={() => navigate(`/processes/${p.id}`)} />
           <ActionBtn label="Edit" icon={Pencil} onClick={onEdit} />
+          <ActionBtn label=".env" icon={FileKey} onClick={onOpenEnv} />
           <ActionBtn label="Delete" icon={Trash2} onClick={doDelete} danger />
         </div>
       </Td>
