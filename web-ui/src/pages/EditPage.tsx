@@ -1,12 +1,13 @@
 // @group BusinessLogic : Edit process configuration form
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { FolderOpen, Save, Bell, ChevronDown, ChevronRight } from 'lucide-react'
 import { api } from '@/lib/api'
 import { parseArgs, parseDotEnv, envToString } from '@/lib/utils'
 import { FormCard, FormField, FormRow } from '@/components/FormLayout'
-import { inputStyle, primaryBtnStyle } from './StartPage'
+import { FolderBrowser } from '@/components/FolderBrowser'
+import { inputStyle, primaryBtnStyle, browseBtnStyle } from './StartPage'
 import type { NotificationConfig } from '@/types'
 
 interface Props {
@@ -37,13 +38,32 @@ export default function EditPage({ onDone }: Props) {
   const [saveToFile, setSaveToFile]       = useState(false)
   const [envFileStatus, setEnvFileStatus] = useState<{ msg: string; ok: boolean } | null>(null)
 
+  // @group BusinessLogic > EnvCheck : Live .env existence badge for the cwd field
+  const [envStatus, setEnvStatus]   = useState<{ exists: boolean } | null>(null)
+  const [browseOpen, setBrowseOpen] = useState(false)
+  const envCheckTimer               = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleCwdChange(val: string) {
+    setCwd(val)
+    setEnvStatus(null)
+    if (envCheckTimer.current) clearTimeout(envCheckTimer.current)
+    const trimmed = val.trim()
+    if (!trimmed) return
+    envCheckTimer.current = setTimeout(() => {
+      api.checkEnvPath(trimmed)
+        .then(r => setEnvStatus({ exists: r.exists }))
+        .catch(() => {})
+    }, 500)
+  }
+
   // @group BusinessLogic > DataFetch : Load process config on mount
   useEffect(() => {
     if (!id) return
     api.getProcess(id).then(p => {
       setScript(p.script || '')
       setName(p.name || '')
-      setCwd(p.cwd || '')
+      const cwdVal = p.cwd || ''
+      setCwd(cwdVal)
       setNamespace(p.namespace || 'default')
       setArgsStr((p.args || []).join(' '))
       setEnvStr(envToString(p.env || {}))
@@ -53,6 +73,12 @@ export default function EditPage({ onDone }: Props) {
       setMaxRestarts(p.max_restarts ?? 10)
       setNotify(p.notify)
       setLoaded(true)
+      // Check .env existence for the loaded cwd immediately
+      if (cwdVal.trim()) {
+        api.checkEnvPath(cwdVal.trim())
+          .then(r => setEnvStatus({ exists: r.exists }))
+          .catch(() => {})
+      }
     }).catch(() => setError('Failed to load process config'))
   }, [id])
 
@@ -127,6 +153,13 @@ export default function EditPage({ onDone }: Props) {
 
   return (
     <div style={{ padding: '20px 24px' }}>
+      {browseOpen && (
+        <FolderBrowser
+          initialPath={cwd.trim()}
+          onSelect={path => handleCwdChange(path)}
+          onClose={() => setBrowseOpen(false)}
+        />
+      )}
       <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 16 }}>
         <h2 style={{ fontSize: 16, fontWeight: 600 }}>Edit Process</h2>
         <button onClick={onDone} style={{ fontSize: 12, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-muted-foreground)' }}>
@@ -144,8 +177,26 @@ export default function EditPage({ onDone }: Props) {
           </FormField>
         </FormRow>
         <FormRow>
-          <FormField label="Working Directory">
-            <input style={inputStyle} value={cwd} onChange={e => setCwd(e.target.value)} placeholder="C:\Users\me\app" />
+          <FormField label={
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              Working Directory
+              {envStatus !== null && (
+                <span style={{
+                  fontSize: 10, padding: '1px 6px', borderRadius: 4, fontWeight: 500,
+                  background: envStatus.exists ? 'rgba(100,200,100,0.15)' : 'rgba(128,128,128,0.1)',
+                  color: envStatus.exists ? 'var(--color-status-running, #4ade80)' : 'var(--color-muted-foreground)',
+                }}>
+                  {envStatus.exists ? '● .env found' : '○ no .env'}
+                </span>
+              )}
+            </span>
+          }>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input style={{ ...inputStyle, flex: 1 }} value={cwd} onChange={e => handleCwdChange(e.target.value)} placeholder="C:\Users\me\app" />
+              <button type="button" onClick={() => setBrowseOpen(true)} title="Browse folders" style={browseBtnStyle}>
+                <FolderOpen size={14} strokeWidth={1.75} />
+              </button>
+            </div>
           </FormField>
           <FormField label="Args (space-separated)">
             <input style={inputStyle} value={argsStr} onChange={e => setArgsStr(e.target.value)} />

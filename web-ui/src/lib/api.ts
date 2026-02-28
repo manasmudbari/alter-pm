@@ -113,6 +113,16 @@ export const api = {
   getSystemPaths: (): Promise<{ data_dir: string; log_dir: string }> =>
     request('/system/paths'),
 
+  checkEnvPath: (dir: string): Promise<{ exists: boolean; path: string }> =>
+    request(`/system/check-env?path=${encodeURIComponent(dir)}`),
+
+  browsePath: (dir: string): Promise<{
+    path: string
+    parent: string | null
+    entries: { name: string; path: string; is_dir: boolean }[]
+    error?: string
+  }> => request(`/system/browse?path=${encodeURIComponent(dir)}`),
+
   saveState: (): Promise<void> =>
     request('/system/save', { method: 'POST' }),
 
