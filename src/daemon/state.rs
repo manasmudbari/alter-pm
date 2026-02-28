@@ -33,7 +33,14 @@ pub struct SavedApp {
     /// Used on restore to detect and clean up orphaned OS processes.
     #[serde(default)]
     pub last_pid: Option<u32>,
+    /// For cron jobs: true if the scheduler was active (Sleeping) at save time.
+    /// false means the user had manually stopped it — do NOT re-arm the scheduler on restore.
+    /// Defaults to true for backward compatibility with old state files.
+    #[serde(default = "default_true")]
+    pub cron_was_active: bool,
 }
+
+fn default_true() -> bool { true }
 
 /// Live daemon state — shared across all Axum handlers
 pub struct DaemonState {
@@ -66,6 +73,10 @@ impl DaemonState {
                 autorestart_on_restore: p.autorestart,
                 cron_run_history: p.cron_run_history,
                 last_pid: p.pid,
+                // Cron scheduler was active if the job was Sleeping at save time.
+                // Stopped = user manually stopped it; don't re-arm on next daemon start.
+                cron_was_active: p.cron.is_some()
+                    && !matches!(p.status, crate::models::process_status::ProcessStatus::Stopped),
             })
             .collect();
 
@@ -104,7 +115,7 @@ impl DaemonState {
 
         for app in saved.apps {
             if app.config.cron.is_some() {
-                // Cron jobs are idempotent — kill any stale duplicate, then re-register as Sleeping
+                // Kill any stale PID first (cron jobs are idempotent)
                 if let Some(pid) = app.last_pid {
                     if is_pid_alive(pid) {
                         tracing::info!(
@@ -114,20 +125,30 @@ impl DaemonState {
                         kill_orphan_pid(pid);
                     }
                 }
-                if let Err(e) = self.manager.register_sleeping(app.config, app.cron_run_history).await {
-                    tracing::warn!("failed to restore cron process '{}': {e}", app.id);
+                if app.cron_was_active {
+                    // Cron scheduler was running at shutdown — restore as Sleeping (re-arm scheduler)
+                    if let Err(e) = self.manager.register_sleeping(app.id, app.config, app.cron_run_history).await {
+                        tracing::warn!("failed to restore cron process '{}': {e}", app.id);
+                    }
+                } else {
+                    // User had manually stopped this cron job — restore as Stopped, don't re-arm
+                    tracing::info!(
+                        "cron process '{}' was stopped at shutdown — restoring as stopped",
+                        app.config.name
+                    );
+                    self.manager.register_stopped(app.id, app.config).await;
                 }
                 continue;
             }
 
             match app.last_pid {
                 Some(pid) if is_pid_alive(pid) => {
-                    // Process survived the daemon restart — re-adopt it
+                    // Process survived the daemon restart — re-adopt it with its saved ID
                     tracing::info!(
                         "re-adopting running process '{}' (PID {})",
                         app.config.name, pid
                     );
-                    self.manager.register_running_adopted(app.config, pid).await;
+                    self.manager.register_running_adopted(app.id, app.config, pid).await;
                 }
                 Some(pid) => {
                     // Process died while daemon was down — mark stopped, let user restart
@@ -135,11 +156,11 @@ impl DaemonState {
                         "process '{}' (PID {}) exited while daemon was down — marking stopped",
                         app.config.name, pid
                     );
-                    self.manager.register_stopped(app.config).await;
+                    self.manager.register_stopped(app.id, app.config).await;
                 }
                 None => {
                     // No PID was ever saved — mark stopped
-                    self.manager.register_stopped(app.config).await;
+                    self.manager.register_stopped(app.id, app.config).await;
                 }
             }
         }
