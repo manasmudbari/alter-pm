@@ -2,6 +2,7 @@
 
 pub mod ecosystem;
 pub mod logs;
+pub mod metrics;
 pub mod notifications;
 pub mod processes;
 pub mod scripts;
