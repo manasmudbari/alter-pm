@@ -1,0 +1,279 @@
+# alter — Linux Release Workflow
+# Triggers on version tags (v*) → builds Linux binaries → packages .deb → publishes APT repo on GitHub Pages
+# https://github.com/thechandanbhagat/alter-pm
+
+name: Release (Linux)
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Build web UI (shared asset, embedded into the binary via rust-embed)
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-web-ui:
+    name: Build Web UI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web-ui/package-lock.json
+
+      - name: Build web UI
+        run: |
+          cd web-ui
+          npm ci
+          npm run build
+
+      - name: Upload web UI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-ui-dist
+          path: web-ui/dist/
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Build Linux amd64 binary
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-linux-amd64:
+    name: Build (Linux amd64)
+    runs-on: ubuntu-latest
+    needs: build-web-ui
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore web UI
+        uses: actions/download-artifact@v4
+        with:
+          name: web-ui-dist
+          path: web-ui/dist/
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: linux-amd64-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: linux-amd64-cargo-
+
+      - name: Build release binary
+        run: cargo build --release --target x86_64-unknown-linux-gnu
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: alter-linux-amd64
+          path: target/x86_64-unknown-linux-gnu/release/alter
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Build Linux arm64 binary (cross-compiled)
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-linux-arm64:
+    name: Build (Linux arm64)
+    runs-on: ubuntu-latest
+    needs: build-web-ui
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore web UI
+        uses: actions/download-artifact@v4
+        with:
+          name: web-ui-dist
+          path: web-ui/dist/
+
+      - name: Install cross-compilation toolchain
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: linux-arm64-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: linux-arm64-cargo-
+
+      - name: Build release binary
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+        run: cargo build --release --target aarch64-unknown-linux-gnu
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: alter-linux-arm64
+          path: target/aarch64-unknown-linux-gnu/release/alter
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Package: build .deb for each arch and attach to GitHub Release
+  # ─────────────────────────────────────────────────────────────────────────────
+  package-deb:
+    name: Package .deb
+    runs-on: ubuntu-latest
+    needs: [build-linux-amd64, build-linux-arm64]
+
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Download amd64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: alter-linux-amd64
+          path: binaries/amd64/
+
+      - name: Download arm64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: alter-linux-arm64
+          path: binaries/arm64/
+
+      - name: Make binaries executable
+        run: |
+          chmod +x binaries/amd64/alter
+          chmod +x binaries/arm64/alter
+
+      - name: Make build script executable
+        run: chmod +x scripts/build-deb.sh
+
+      - name: Build amd64 .deb
+        run: ./scripts/build-deb.sh binaries/amd64/alter ${{ steps.version.outputs.VERSION }} amd64
+
+      - name: Build arm64 .deb
+        run: ./scripts/build-deb.sh binaries/arm64/alter ${{ steps.version.outputs.VERSION }} arm64
+
+      - name: Upload .deb artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: alter-deb-packages
+          path: "*.deb"
+
+      - name: Attach .deb files to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "*.deb"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Publish: update APT repository on gh-pages branch
+  # ─────────────────────────────────────────────────────────────────────────────
+  publish-apt-repo:
+    name: Publish APT Repository
+    runs-on: ubuntu-latest
+    needs: package-deb
+
+    steps:
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+          # Create the branch if it doesn't exist yet
+          fetch-depth: 0
+
+      - name: Download .deb packages
+        uses: actions/download-artifact@v4
+        with:
+          name: alter-deb-packages
+          path: new-debs/
+
+      - name: Set up APT repo directory structure
+        run: |
+          mkdir -p gh-pages/apt/pool/main
+          mkdir -p gh-pages/apt/dists/stable/main/binary-amd64
+          mkdir -p gh-pages/apt/dists/stable/main/binary-arm64
+
+      - name: Copy .deb files into pool
+        run: cp new-debs/*.deb gh-pages/apt/pool/main/
+
+      - name: Generate Packages files
+        run: |
+          cd gh-pages/apt
+          dpkg-scanpackages --arch amd64 pool/main > dists/stable/main/binary-amd64/Packages
+          dpkg-scanpackages --arch arm64 pool/main > dists/stable/main/binary-arm64/Packages
+          gzip -k -f dists/stable/main/binary-amd64/Packages
+          gzip -k -f dists/stable/main/binary-arm64/Packages
+
+      - name: Generate Release file
+        run: |
+          cd gh-pages/apt
+          apt-ftparchive \
+            -o APT::FTPArchive::Release::Origin=alter \
+            -o APT::FTPArchive::Release::Label=alter \
+            -o APT::FTPArchive::Release::Suite=stable \
+            -o APT::FTPArchive::Release::Codename=stable \
+            -o APT::FTPArchive::Release::Architectures="amd64 arm64" \
+            -o APT::FTPArchive::Release::Components=main \
+            -o APT::FTPArchive::Release::Description="alter process manager APT repository" \
+            release dists/stable > dists/stable/Release
+
+      - name: Import GPG key and sign Release
+        env:
+          APT_GPG_KEY: ${{ secrets.APT_GPG_KEY }}
+        run: |
+          echo "$APT_GPG_KEY" | gpg --batch --import
+
+          KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec/{print $5; exit}')
+          echo "Signing with key: $KEY_ID"
+
+          cd gh-pages/apt
+          gpg --batch --yes --default-key "$KEY_ID" \
+              --clearsign -o dists/stable/InRelease dists/stable/Release
+          gpg --batch --yes --default-key "$KEY_ID" \
+              --detach-sign -o dists/stable/Release.gpg dists/stable/Release
+
+          # Export public key for users to download
+          gpg --armor --export "$KEY_ID" > ../gpg-key.asc
+
+      - name: Commit and push to gh-pages
+        run: |
+          cd gh-pages
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add apt/ gpg-key.asc
+          git commit -m "apt: release ${{ needs.package-deb.outputs.version }}" || echo "Nothing to commit"
+          git push origin gh-pages

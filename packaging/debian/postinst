@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+
+# @group Configuration : Post-install hook — reload systemd and print usage hint
+if command -v systemctl &>/dev/null && [ -d /run/systemd/system ]; then
+    systemctl daemon-reload || true
+fi
+
+echo ""
+echo "[alter] Installation complete!"
+echo ""
+echo "  Start the daemon:     alter daemon start"
+echo "  Start a process:      alter start node -- server.js"
+echo "  Open web dashboard:   alter web"
+echo ""
+echo "  To run on boot:       sudo systemctl enable --now alter-daemon"
+echo ""

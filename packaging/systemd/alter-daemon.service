@@ -1,0 +1,16 @@
+[Unit]
+Description=alter process manager daemon
+Documentation=https://github.com/thechandanbhagat/alter-pm
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/alter --internal-daemon --port 2999
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=alter-daemon
+
+[Install]
+WantedBy=multi-user.target

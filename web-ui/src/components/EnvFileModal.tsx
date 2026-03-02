@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { api } from '@/lib/api'
 import type { EnvFileEntry } from '@/types'
+import { EnvEditor } from '@/components/EnvEditor'
 
 interface Props {
   processId: string
@@ -254,36 +255,13 @@ export function EnvFileModal({ processId, processName, onClose, onRestart }: Pro
               )}
 
               {/* Editor */}
-              <div style={{
-                flex: 1, display: 'flex', gap: 0,
-                border: `1px solid ${dirty ? activeColor : 'var(--color-border)'}`,
-                borderRadius: 4, overflow: 'hidden', background: 'var(--color-background)',
-              }}>
-                {/* Line numbers */}
-                <div style={{
-                  padding: '10px 8px', textAlign: 'right', userSelect: 'none',
-                  fontFamily: 'monospace', fontSize: 12, lineHeight: '1.6',
-                  color: 'var(--color-muted-foreground)', background: 'var(--color-muted)',
-                  borderRight: '1px solid var(--color-border)', minWidth: 36,
-                }}>
-                  {Array.from({ length: lineCount }, (_, i) => (
-                    <div key={i}>{i + 1}</div>
-                  ))}
-                </div>
-                <textarea
-                  ref={textareaRef}
-                  value={content}
-                  onChange={e => { setContent(e.target.value); setDirty(true); setSaved(false) }}
-                  spellCheck={false}
-                  placeholder={'KEY=value\nDATABASE_URL=postgres://...\nSECRET_KEY=...'}
-                  style={{
-                    flex: 1, padding: '10px 12px',
-                    fontFamily: 'monospace', fontSize: 13, lineHeight: '1.6',
-                    background: 'transparent', color: 'var(--color-foreground)',
-                    border: 'none', outline: 'none', resize: 'none', minHeight: 220,
-                  }}
-                />
-              </div>
+              <EnvEditor
+                value={content}
+                onChange={v => { setContent(v); setDirty(true); setSaved(false) }}
+                borderColor={dirty ? activeColor : 'var(--color-border)'}
+                placeholder={'KEY=value\nDATABASE_URL=postgres://...\nSECRET_KEY=...'}
+                textareaRef={textareaRef}
+              />
 
               {syncMsg && (
                 <div style={{ fontSize: 12, color: activeColor }}>{syncMsg}</div>

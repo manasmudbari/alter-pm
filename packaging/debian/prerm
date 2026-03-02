@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+
+# @group Configuration : Pre-removal hook — stop daemon and disable systemd unit
+if command -v alter &>/dev/null; then
+    alter daemon stop 2>/dev/null || true
+fi
+
+if command -v systemctl &>/dev/null && [ -d /run/systemd/system ]; then
+    systemctl stop alter-daemon 2>/dev/null || true
+    systemctl disable alter-daemon 2>/dev/null || true
+fi
