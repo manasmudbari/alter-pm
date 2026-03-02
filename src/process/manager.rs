@@ -946,6 +946,3 @@ fn kill_process(pid: u32) {
         }
     }
 }
-
-#[cfg(not(target_os = "windows"))]
-extern crate libc;
