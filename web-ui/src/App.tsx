@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { BrowserRouter, Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutGrid, Plus, Clock, ScrollText, Settings, Bell, type LucideIcon } from 'lucide-react'
+import { LayoutGrid, Plus, Clock, ScrollText, Settings, Bell, Bot, Network, type LucideIcon } from 'lucide-react'
 import { useDaemonHealth } from '@/hooks/useDaemonHealth'
 import { useProcesses } from '@/hooks/useProcesses'
 import { useSettings } from '@/hooks/useSettings'
@@ -10,6 +10,7 @@ import { useDialog } from '@/hooks/useDialog'
 import { useNotificationTray } from '@/hooks/useNotificationTray'
 import { Dialog } from '@/components/Dialog'
 import { NotificationTray } from '@/components/NotificationTray'
+import { AiPanel } from '@/components/AiPanel'
 import { formatUptime, statusColor } from '@/lib/utils'
 import { api } from '@/lib/api'
 import ProcessesPage from '@/pages/ProcessesPage'
@@ -22,6 +23,7 @@ import SettingsPage from '@/pages/SettingsPage'
 import AnalyticsPage from '@/pages/AnalyticsPage'
 import LogLibraryPage from '@/pages/LogLibraryPage'
 import NotificationsPage from '@/pages/NotificationsPage'
+import PortFinderPage from '@/pages/PortFinderPage'
 import type { ProcessInfo } from '@/types'
 
 // @group BusinessLogic > Layout : Sidebar + content shell
@@ -39,6 +41,18 @@ function Layout() {
 
   const openTray = () => { setTrayOpen(true); markAllRead() }
   const closeTray = () => setTrayOpen(false)
+
+  // @group BusinessLogic > AiPanel : AI assistant panel state
+  const [aiOpen, setAiOpen] = useState(false)
+  const [aiProcessId, setAiProcessId] = useState<string | null>(null)
+  const [aiProcessName, setAiProcessName] = useState<string | null>(null)
+
+  const openAi = (processId?: string, processName?: string) => {
+    setAiProcessId(processId ?? null)
+    setAiProcessName(processName ?? null)
+    setAiOpen(true)
+  }
+  const closeAi = () => setAiOpen(false)
 
   const connected = error === null
 
@@ -65,6 +79,7 @@ function Layout() {
 
   const isProcessActive = location.pathname === '/processes' || location.pathname.startsWith('/processes/')
   const isCronActive    = location.pathname === '/cron-jobs' || location.pathname === '/cron-jobs/new'
+  const isPortsActive   = location.pathname === '/ports'
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
@@ -88,6 +103,14 @@ function Layout() {
         onMarkAllRead={markAllRead}
         onClearAll={clearAll}
         onDismiss={dismiss}
+      />
+
+      {/* AI assistant panel — slides in from right */}
+      <AiPanel
+        open={aiOpen}
+        processId={aiProcessId}
+        processName={aiProcessName}
+        onClose={closeAi}
       />
 
       {/* Sidebar */}
@@ -147,8 +170,31 @@ function Layout() {
           <div style={{ height: 4 }} />
           <NavBtn to="/logs" icon={ScrollText} label="Log Library" active={location.pathname === '/logs'} />
 
+          {/* Tools section */}
+          <div style={{
+            fontSize: 9, fontWeight: 700, letterSpacing: '0.1em',
+            color: 'var(--color-muted-foreground)', padding: '8px 16px 2px',
+            textTransform: 'uppercase', opacity: 0.6,
+          }}>
+            Tools
+          </div>
+          <NavBtn to="/ports" icon={Network} label="Port Finder" active={isPortsActive} />
+
+          <div style={{ height: 4 }} />
           {/* @group BusinessLogic > BellBtn : Activity tray toggle — not a nav link */}
           <BellBtn unreadCount={unreadCount} onClick={openTray} />
+
+          {/* @group BusinessLogic > AiBtn : AI assistant panel toggle */}
+          <AiBtn onClick={() => {
+            // Pass the current process id when on a process detail page
+            const match = location.pathname.match(/^\/processes\/([^/]+)$/)
+            if (match) {
+              const proc = processes.find(p => p.id === match[1] || p.name === match[1])
+              openAi(match[1], proc?.name)
+            } else {
+              openAi()
+            }
+          }} />
         </nav>
 
         {/* Active processes list */}
@@ -184,6 +230,7 @@ function Layout() {
           <Route path="/cron-jobs/new" element={<CreateCronJobPage onDone={() => { reload(); navigate('/cron-jobs') }} settings={settings} />} />
           <Route path="/logs" element={<LogLibraryPage processes={processes} reload={reload} />} />
           <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/ports" element={<PortFinderPage />} />
           <Route path="/settings" element={<SettingsPage settings={settings} onUpdate={updateSettings} onReset={resetToDefaults} />} />
         </Routes>
       </div>
@@ -292,6 +339,31 @@ function BellBtn({ unreadCount, onClick }: { unreadCount: number; onClick: () =>
         )}
       </span>
       Activity
+    </button>
+  )
+}
+
+// @group BusinessLogic > AiBtn : AI assistant sidebar button
+function AiBtn({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      title="AI Assistant (GitHub Copilot)"
+      style={{
+        display: 'flex', alignItems: 'center', gap: 9,
+        width: '100%', padding: '7px 16px', fontSize: 13,
+        color: 'var(--color-foreground)',
+        background: 'transparent', border: 'none',
+        borderLeft: '2px solid transparent',
+        cursor: 'pointer', fontWeight: 500,
+        textAlign: 'left',
+        fontFamily: 'inherit',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-accent)' }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+    >
+      <Bot size={14} style={{ flexShrink: 0 }} />
+      AI Assistant
     </button>
   )
 }
