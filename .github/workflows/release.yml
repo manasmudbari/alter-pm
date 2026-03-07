@@ -58,8 +58,6 @@ jobs:
           npm run build
 
       - name: Build release binary
-        env:
-          RUSTFLAGS: "-C target-feature=+crt-static"
         run: cargo build --release --target x86_64-pc-windows-msvc
 
       # Copy binary to target/release/ where Inno Setup script expects it
@@ -200,60 +198,3 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: false
-
-  # ─────────────────────────────────────────────────────────────────────────────
-  # Submit WinGet Manifest PR
-  # Patches the PLACEHOLDER hash, then opens a PR on microsoft/winget-pkgs.
-  # Requires a repo secret:  WINGET_PR_TOKEN  (GitHub PAT, scope: public_repo)
-  # ─────────────────────────────────────────────────────────────────────────────
-  submit-winget:
-    name: Submit WinGet Manifest PR
-    runs-on: windows-latest
-    needs: [package-installer, publish-release]
-    # Skip pre-release tags (e.g. v0.4.1-rc1)
-    if: ${{ !contains(github.ref_name, '-') }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Patch installer manifest with real SHA256
-        shell: pwsh
-        run: |
-          $version = "${{ needs.package-installer.outputs.version }}"
-          $sha256  = "${{ needs.package-installer.outputs.sha256 }}"
-          $path    = "manifests\t\thechandanbhagat\alter\$version\thechandanbhagat.alter.installer.yaml"
-
-          if (-not (Test-Path $path)) {
-            Write-Error "Manifest not found: $path"
-            exit 1
-          }
-
-          $content = Get-Content $path -Raw
-          if ($content -notmatch 'PLACEHOLDER_FILL_AFTER_CI_BUILD') {
-            Write-Host "Manifest already patched — nothing to do."
-          } else {
-            $content = $content -replace 'PLACEHOLDER_FILL_AFTER_CI_BUILD', $sha256.ToUpper()
-            Set-Content -Path $path -Value $content -NoNewline
-            Write-Host "Patched $path"
-            Write-Host "  SHA256 = $($sha256.ToUpper())"
-          }
-
-      - name: Install wingetcreate
-        shell: pwsh
-        run: |
-          Invoke-WebRequest `
-            -Uri "https://aka.ms/wingetcreate/latest" `
-            -OutFile wingetcreate.exe
-
-      - name: Submit manifest to winget-pkgs
-        shell: pwsh
-        env:
-          WINGET_PR_TOKEN: ${{ secrets.WINGET_PR_TOKEN }}
-        run: |
-          $version      = "${{ needs.package-installer.outputs.version }}"
-          $manifestDir  = "manifests\t\thechandanbhagat\alter\$version"
-
-          .\wingetcreate.exe submit `
-            --token "$env:WINGET_PR_TOKEN" `
-            $manifestDir
