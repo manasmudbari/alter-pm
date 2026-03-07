@@ -1,4 +1,6 @@
 # Suppress MSVC PDB generation on Windows dev builds to avoid LNK1318 stream-count limit
 # on large Rust binaries. Release builds use strip=true which already removes debug info.
+# +crt-static statically links the MSVC runtime (VCRUNTIME140.dll etc.) into the binary
+# so the executable is self-contained — required for winget validation and general distribution.
 [target.x86_64-pc-windows-msvc]
-rustflags = ["-C", "link-arg=/DEBUG:NONE"]
+rustflags = ["-C", "link-arg=/DEBUG:NONE", "-C", "target-feature=+crt-static"]
