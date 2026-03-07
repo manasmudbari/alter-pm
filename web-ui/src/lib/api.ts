@@ -2,6 +2,48 @@
 
 import type { CronRun, DaemonHealth, EnvFileEntry, LogLine, NotificationConfig, NotificationsStore, ProcessInfo, ScriptInfo, StartProcessBody } from '@/types'
 
+// @group Types > AI : Chat message and request types (mirrored from Rust models/ai.rs)
+export interface AiChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export interface AiChatRequest {
+  message: string
+  process_id?: string
+  history: AiChatMessage[]
+}
+
+export interface AiSettingsInfo {
+  github_token_set: boolean
+  github_token_hint: string
+  model: string
+  enabled: boolean
+  github_username: string
+  client_id_set: boolean
+}
+
+export interface AiAuthStartResponse {
+  user_code: string
+  verification_uri: string
+  expires_in: number
+  interval: number
+}
+
+export interface AiAuthStatusResponse {
+  status: 'idle' | 'pending' | 'expired' | 'denied' | 'complete' | 'error'
+  username?: string
+  interval?: number
+  message?: string
+}
+
+export interface AiModelInfo {
+  id: string
+  name: string
+  publisher: string
+  summary: string
+}
+
 const BASE = '/api/v1'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -145,4 +187,81 @@ export const api = {
 
   shutdownDaemon: (): Promise<void> =>
     request('/system/shutdown', { method: 'POST' }),
+
+  // @group APIEndpoints > AI : Get stored AI settings (token is masked server-side)
+  aiGetSettings: (): Promise<AiSettingsInfo> =>
+    request('/ai/settings'),
+
+  // @group APIEndpoints > AI : Persist AI settings (send empty string to keep existing token/client_id)
+  aiSaveSettings: (body: { github_token?: string; model?: string; enabled?: boolean; client_id?: string }): Promise<{ success: boolean }> =>
+    request('/ai/settings', { method: 'PUT', body: JSON.stringify(body) }),
+
+  // @group APIEndpoints > AI : Begin GitHub OAuth Device Flow — returns user_code to display
+  aiAuthStart: (): Promise<AiAuthStartResponse> =>
+    request('/ai/auth/start', { method: 'POST' }),
+
+  // @group APIEndpoints > AI : Poll GitHub token exchange — returns current auth status
+  aiAuthStatus: (): Promise<AiAuthStatusResponse> =>
+    request('/ai/auth/status'),
+
+  // @group APIEndpoints > AI : Disconnect GitHub account — clears stored token and username
+  aiAuthLogout: (): Promise<{ success: boolean }> =>
+    request('/ai/auth', { method: 'DELETE' }),
+
+  // @group APIEndpoints > AI : List GitHub Models catalog (chat-completion models only)
+  aiGetModels: (): Promise<{ models: AiModelInfo[] }> =>
+    request('/ai/models'),
+
+  // @group APIEndpoints > AI : Stream a chat response — returns AbortController to cancel
+  aiChat(
+    req: AiChatRequest,
+    onDelta: (token: string) => void,
+    onDone: () => void,
+    onError: (msg: string) => void,
+  ): AbortController {
+    const abort = new AbortController()
+    ;(async () => {
+      try {
+        const res = await fetch(`${BASE}/ai/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(req),
+          signal: abort.signal,
+        })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          onError((data as { error?: string }).error ?? `HTTP ${res.status}`)
+          return
+        }
+        const reader = res.body?.getReader()
+        if (!reader) { onDone(); return }
+        const decoder = new TextDecoder()
+        let buf = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += decoder.decode(value, { stream: true })
+          const lines = buf.split('\n')
+          buf = lines.pop() ?? ''
+          for (const line of lines) {
+            const trimmed = line.trim()
+            if (!trimmed.startsWith('data: ')) continue
+            const payload = trimmed.slice(6)
+            try {
+              const parsed = JSON.parse(payload) as { delta?: string; done?: boolean; error?: string }
+              if (parsed.error) { onError(parsed.error); return }
+              if (parsed.done)  { onDone(); return }
+              if (parsed.delta) onDelta(parsed.delta)
+            } catch { /* ignore malformed lines */ }
+          }
+        }
+        onDone()
+      } catch (e: unknown) {
+        if ((e as Error)?.name !== 'AbortError') {
+          onError((e as Error)?.message ?? 'Connection error')
+        }
+      }
+    })()
+    return abort
+  },
 }
