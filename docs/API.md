@@ -17,7 +17,27 @@ The host and port can be changed when starting the daemon (`alter daemon start -
 
 ## Authentication
 
-No authentication by default. The API binds to `127.0.0.1` (loopback only) and is not exposed to the network.
+By default the API is unauthenticated and binds to `127.0.0.1` (loopback only). Once a dashboard password is configured, **all** API routes require a valid bearer token.
+
+### Token types
+
+| Token | Source | Expiry |
+|-------|--------|--------|
+| **Session token** | `POST /auth/login` or `POST /auth/setup` | 24 hours |
+| **Master token** | `%APPDATA%\alter-pm2\auth.json` (CLI only) | Never |
+
+### Sending a token
+
+```http
+Authorization: Bearer <token>
+```
+
+For EventSource / SSE connections that cannot set request headers, append `?token=<token>` to the URL.
+
+**Unauthenticated response (401):**
+```json
+{ "error": "Unauthorized" }
+```
 
 ---
 
@@ -390,6 +410,281 @@ POST /api/v1/system/shutdown
 
 ---
 
+### `POST /system/restart`
+
+Saves state, then restarts the daemon without dropping managed processes.
+
+```
+POST /api/v1/system/restart
+```
+
+**Behaviour:**
+1. Saves the current process state to disk
+2. Removes the PID file
+3. Spawns a detached watcher (`cmd /C timeout 1 && alter daemon start` on Windows, `sh -c 'sleep 1 && alter daemon start'` on Linux/macOS)
+4. Exits — managed processes survive because they are spawned outside the daemon's job object
+
+**Response:**
+```json
+{ "success": true, "message": "daemon restarting" }
+```
+
+---
+
+## Authentication Endpoints
+
+All auth endpoints live under `/api/v1/auth`. The auth endpoints themselves are **not** protected by the middleware (so you can log in without a token). All other endpoints require a valid token when a password is configured.
+
+---
+
+### `GET /auth/status`
+
+Check whether authentication is configured.
+
+```
+GET /api/v1/auth/status
+```
+
+**Response:**
+```json
+{
+  "password_configured": true,
+  "pin_configured": false,
+  "passkeys_count": 0,
+  "passkeys_supported": false,
+  "lock_timeout_mins": null
+}
+```
+
+---
+
+### `POST /auth/setup`
+
+First-time password setup. Returns `409 Conflict` if a password is already set.
+
+```
+POST /api/v1/auth/setup
+{ "password": "my-secure-password" }
+```
+
+**Response:**
+```json
+{
+  "session_token": "<64-char hex token>",
+  "expires_at": "2026-03-12T11:00:00Z"
+}
+```
+
+---
+
+### `POST /auth/login`
+
+Password-based login.
+
+```
+POST /api/v1/auth/login
+{ "password": "my-secure-password" }
+```
+
+**Response:** same as `/auth/setup` (`session_token`, `expires_at`).
+
+**Errors:** `401 Unauthorized` — invalid password.
+
+---
+
+### `POST /auth/pin/login`
+
+PIN-based quick login (4 or 6 digits).
+
+```
+POST /api/v1/auth/pin/login
+{ "pin": "1234" }
+```
+
+**Response:** same as `/auth/login`.
+
+**Errors:** `401 Unauthorized` — invalid or unconfigured PIN.
+
+---
+
+### `DELETE /auth/session`
+
+Logout — invalidates the bearer token sent in the `Authorization` header.
+
+```
+DELETE /api/v1/auth/session
+Authorization: Bearer <session_token>
+```
+
+**Response:**
+```json
+{ "success": true }
+```
+
+---
+
+### `POST /auth/change-password`
+
+Change the dashboard password. Requires the current password.
+
+```
+POST /api/v1/auth/change-password
+{
+  "current_password": "old-password",
+  "new_password": "new-secure-password"
+}
+```
+
+**Response:**
+```json
+{ "success": true }
+```
+
+---
+
+### `POST /auth/pin`
+
+Set or update the quick-unlock PIN (4 or 6 digits only, numeric).
+
+```
+POST /api/v1/auth/pin
+{ "pin": "1234" }
+```
+
+**Response:**
+```json
+{ "success": true }
+```
+
+---
+
+### `DELETE /auth/pin`
+
+Remove the configured PIN.
+
+```
+DELETE /api/v1/auth/pin
+```
+
+**Response:**
+```json
+{ "success": true }
+```
+
+---
+
+### `PATCH /auth/settings`
+
+Update authentication settings.
+
+```
+PATCH /api/v1/auth/settings
+{ "lock_timeout_mins": 30 }
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `lock_timeout_mins` | number \| null | Auto-lock after this many minutes of inactivity. `null` disables auto-lock. |
+
+**Response:**
+```json
+{ "success": true }
+```
+
+---
+
+## Telegram Endpoints
+
+All Telegram endpoints live under `/api/v1/telegram`. The bot token is stored server-side and is never returned to the client in plaintext (only the last 4 characters are shown).
+
+---
+
+### `GET /telegram`
+
+Return the current Telegram configuration.
+
+```
+GET /api/v1/telegram
+```
+
+**Response:**
+```json
+{
+  "enabled": true,
+  "bot_token_set": true,
+  "bot_token_hint": "****xYzW",
+  "allowed_chat_ids": [123456789],
+  "notify_on_crash": true,
+  "notify_on_restart": true,
+  "notify_on_start": false,
+  "notify_on_stop": false
+}
+```
+
+---
+
+### `PUT /telegram`
+
+Update the Telegram configuration. All fields are optional — omitted fields retain their current values.
+
+```
+PUT /api/v1/telegram
+{
+  "enabled": true,
+  "bot_token": "123456:ABCDEFabcdef...",
+  "allowed_chat_ids": [123456789],
+  "notify_on_crash": true,
+  "notify_on_restart": true,
+  "notify_on_start": false,
+  "notify_on_stop": false
+}
+```
+
+> Send `"bot_token": ""` to clear the stored token.
+
+**Response:**
+```json
+{ "success": true }
+```
+
+---
+
+### `POST /telegram/test`
+
+Send a test message to a Telegram chat ID using the currently stored bot token.
+
+```
+POST /api/v1/telegram/test
+{ "chat_id": 123456789 }
+```
+
+**Response:**
+```json
+{ "success": true }
+```
+
+---
+
+### `GET /telegram/botinfo`
+
+Fetch the bot's Telegram username and display name by calling the Telegram API with the stored token.
+
+```
+GET /api/v1/telegram/botinfo
+```
+
+**Response (success):**
+```json
+{ "ok": true, "username": "MyAlterBot", "first_name": "Alter PM" }
+```
+
+**Response (failure):**
+```json
+{ "ok": false, "username": null, "first_name": null, "error": "invalid token" }
+```
+
+---
+
 ## Ecosystem Endpoint
 
 ### `POST /ecosystem`
@@ -520,7 +815,9 @@ POST /api/v1/notifications/test
 | `200 OK` | Successful GET, POST (non-create) |
 | `201 Created` | Process created (POST /processes) |
 | `400 Bad Request` | Invalid request body or parameters |
+| `401 Unauthorized` | Missing or invalid bearer token |
 | `404 Not Found` | Process not found |
+| `409 Conflict` | Resource already exists (e.g. password already set) |
 | `500 Internal Server Error` | Unexpected server error |
 
 ---

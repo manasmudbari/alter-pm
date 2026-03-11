@@ -6,6 +6,40 @@ Format: `[version] — YYYY-MM-DD` with sections: **Added**, **Changed**, **Fixe
 
 ---
 
+## [0.6.0] — 2026-03-11
+
+### Added
+
+**Dashboard Authentication**
+- Password-protected web dashboard — Argon2id hashing, minimum 8-character password
+- Session tokens (24 h expiry) accepted via `Authorization: Bearer` header or `?token=` query param (for SSE streams)
+- PIN quick-unlock: set a 4 or 6-digit PIN from Settings → Security for faster re-authentication
+- Auto-lock timeout configurable in minutes from Settings → Security
+- Change-password flow (requires current password)
+- Master CLI token — persistent token stored in `auth.json`, read by the CLI only, never returned to the browser
+- Login / Setup page in the web UI — first launch shows a setup wizard; subsequent visits show the login form
+- Auth middleware protecting all API routes when a password is configured
+- Passkey / WebAuthn stubs (endpoints registered; return "not supported" until a full WebAuthn backend is wired up)
+- New REST API: `GET /api/v1/auth/status`, `POST /api/v1/auth/setup`, `POST /api/v1/auth/login`, `POST /api/v1/auth/pin/login`, `DELETE /api/v1/auth/session`, `POST /api/v1/auth/change-password`, `POST/DELETE /api/v1/auth/pin`, `PATCH /api/v1/auth/settings`
+- Settings stored in `%APPDATA%\alter-pm2\auth.json`
+
+**Telegram Bot**
+- Long-polling Telegram bot — create a bot with @BotFather, paste the token into Settings → Telegram, and the daemon starts polling automatically
+- Bot commands: `/ping`, `/help`, `/list`, `/status <name>`, `/start <name>`, `/stop <name>`, `/restart <name>`, `/logs <name> [lines]`
+- Allowed-chat-IDs whitelist — restrict which Telegram chats/users can issue commands; checks both `chat_id` and `sender_id`
+- Push notifications: configurable per-event toggles (`on_crash`, `on_restart`, `on_start`, `on_stop`) sent as formatted Telegram messages
+- New REST API: `GET/PUT /api/v1/telegram`, `POST /api/v1/telegram/test`, `GET /api/v1/telegram/botinfo`
+- Settings stored in `%APPDATA%\alter-pm2\telegram.json`
+
+**Daemon Self-Restart**
+- `POST /api/v1/system/restart` — saves state, spawns a detached watcher that re-launches the daemon after 1 s, then exits cleanly; managed processes survive because they run outside the daemon job object
+
+### Removed
+
+- WinGet manifests for versions 0.1.0–0.4.0 removed from the repository (canonical source is the winget-pkgs catalogue)
+
+---
+
 ## [0.5.0] — 2026-03-07
 
 ### Added

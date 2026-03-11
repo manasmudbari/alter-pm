@@ -36,6 +36,8 @@ Download the latest `alter-x.x.x-windows-x64-setup.exe` from [Releases](https://
 - **Ecosystem config** — define all apps in one TOML or JSON file
 - **Full REST API** — automate everything
 - **Single binary** — no runtime dependencies
+- **Dashboard authentication** — password-protect the web UI with Argon2id hashing, session tokens, and a PIN quick-unlock
+- **Telegram bot** — control your processes from Telegram: list, start, stop, restart, tail logs, and receive crash/restart alerts
 - **AI assistant** — built-in chat panel powered by GitHub Models with streaming responses and process-aware context
 - **Port Finder** — scan all open TCP/UDP ports, see owning processes, and kill by PID from the dashboard
 - **Notifications** — Slack, Discord, Microsoft Teams, and webhook alerts on crash, restart, cron events, and more
