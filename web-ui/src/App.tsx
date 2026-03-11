@@ -1,6 +1,8 @@
 // @group BusinessLogic : Root app — layout shell + React Router
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import LoginPage from '@/pages/LoginPage'
+import { isAuthenticated, setSessionToken } from '@/lib/auth'
 import { BrowserRouter, Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { LayoutGrid, Plus, Clock, ScrollText, Settings, Bell, Bot, Network, type LucideIcon } from 'lucide-react'
 import { useDaemonHealth } from '@/hooks/useDaemonHealth'
@@ -27,7 +29,7 @@ import PortFinderPage from '@/pages/PortFinderPage'
 import type { ProcessInfo } from '@/types'
 
 // @group BusinessLogic > Layout : Sidebar + content shell
-function Layout() {
+function Layout({ onLock }: { onLock: () => void }) {
   const { settings, updateSettings, resetToDefaults } = useSettings()
   const { processes, error, reload } = useProcesses(settings.autoRefresh, settings.processRefreshInterval)
   const health = useDaemonHealth(settings.healthRefreshInterval)
@@ -213,6 +215,7 @@ function Layout() {
           <NavBtn to="/settings" icon={Settings} label="Settings" active={location.pathname === '/settings'} />
           <div style={{ display: 'flex', gap: 6 }}>
             <SidebarBtn label="Save" onClick={handleSave} />
+            <SidebarBtn label="Lock" onClick={onLock} />
             <SidebarBtn label="Shutdown" onClick={handleShutdown} danger />
           </div>
         </div>
@@ -416,10 +419,251 @@ function SidebarBtn({ label, onClick, danger }: { label: string; onClick: () => 
   )
 }
 
+// @group Authentication > LockScreen : Fullscreen lock overlay — PIN numpad or password field
+function LockScreen({ pinConfigured, onUnlocked }: { pinConfigured: boolean; onUnlocked: () => void }) {
+  const [pin, setPin] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  // @group Authentication > LockScreen : Keyboard input for PIN numpad
+  useEffect(() => {
+    if (!pinConfigured) return
+    function handleKey(e: KeyboardEvent) {
+      if (loading) return
+      if (e.key >= '0' && e.key <= '9') {
+        pressDigit(e.key)
+      } else if (e.key === 'Backspace') {
+        setPin(p => p.slice(0, -1))
+      }
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [pinConfigured, loading, pin]) // re-bind when pin/loading change so pressDigit has fresh closure
+
+  async function unlockWithPin(digits: string) {
+    setLoading(true)
+    setError(null)
+    try {
+      const { session_token } = await api.authPinLogin(digits)
+      setSessionToken(session_token)
+      onUnlocked()
+    } catch {
+      setError('Incorrect PIN')
+      setPin('')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function unlockWithPassword(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    try {
+      const { session_token } = await api.authLogin(password)
+      setSessionToken(session_token)
+      onUnlocked()
+    } catch {
+      setError('Incorrect password')
+      setPassword('')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function pressDigit(d: string) {
+    if (loading || pin.length >= 6) return
+    const next = pin + d
+    setPin(next)
+    if (next.length === 4 || next.length === 6) {
+      // slight delay so user sees the dot filled before submit
+      setTimeout(() => unlockWithPin(next), 80)
+    }
+  }
+
+  const lockOverlay: React.CSSProperties = {
+    position: 'fixed', inset: 0, zIndex: 9999,
+    background: 'var(--color-background)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexDirection: 'column', gap: 24,
+  }
+
+  return (
+    <div style={lockOverlay}>
+      <div style={{ textAlign: 'center', marginBottom: 8 }}>
+        <span style={{ fontWeight: 700, fontSize: 24, color: 'var(--color-primary)' }}>alter</span>
+        <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)', fontWeight: 500 }}>pm</span>
+        <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--color-muted-foreground)' }}>
+          Screen locked
+        </p>
+      </div>
+
+      {error && (
+        <div style={{
+          background: 'color-mix(in srgb, var(--color-destructive) 15%, transparent)',
+          border: '1px solid var(--color-destructive)',
+          borderRadius: 6, padding: '6px 14px',
+          fontSize: 13, color: 'var(--color-destructive)',
+        }}>
+          {error}
+        </div>
+      )}
+
+      {pinConfigured ? (
+        /* PIN numpad */
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+          {/* Dots */}
+          <div style={{ display: 'flex', gap: 12 }}>
+            {[0, 1, 2, 3, 4, 5].map(i => (
+              <div key={i} style={{
+                width: 12, height: 12, borderRadius: '50%',
+                background: i < pin.length ? 'var(--color-primary)' : 'var(--color-border)',
+                transition: 'background 0.15s',
+                display: pin.length <= 4 && i >= 4 ? 'none' : 'block',
+              }} />
+            ))}
+          </div>
+          {/* Numpad */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+            {['1','2','3','4','5','6','7','8','9','','0','⌫'].map((d, idx) => (
+              d === '' ? <div key={idx} /> :
+              <button
+                key={idx}
+                onClick={() => d === '⌫' ? setPin(p => p.slice(0, -1)) : pressDigit(d)}
+                disabled={loading}
+                style={{
+                  width: 64, height: 64, borderRadius: 32,
+                  fontSize: d === '⌫' ? 20 : 22, fontWeight: 500,
+                  background: 'var(--color-card)',
+                  border: '1px solid var(--color-border)',
+                  cursor: 'pointer', color: 'var(--color-foreground)',
+                  opacity: loading ? 0.5 : 1,
+                }}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+          <p style={{ fontSize: 11, color: 'var(--color-muted-foreground)' }}>
+            Enter your PIN to unlock
+          </p>
+        </div>
+      ) : (
+        /* Password field */
+        <form onSubmit={unlockWithPassword} style={{ display: 'flex', flexDirection: 'column', gap: 12, width: 300 }}>
+          <div style={{ position: 'relative' }}>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="Enter password"
+              autoFocus
+              required
+              style={{
+                width: '100%', padding: '9px 36px 9px 12px',
+                fontSize: 14, borderRadius: 6,
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-card)',
+                color: 'var(--color-foreground)',
+                outline: 'none', boxSizing: 'border-box',
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(v => !v)}
+              style={{
+                position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--color-muted-foreground)', padding: 0, display: 'flex',
+              }}
+              tabIndex={-1}
+            >
+              {showPassword ? '🙈' : '👁'}
+            </button>
+          </div>
+          <button
+            type="submit"
+            disabled={loading || !password}
+            style={{
+              padding: '9px 16px', fontSize: 13, fontWeight: 600,
+              background: 'var(--color-primary)', color: 'var(--color-primary-foreground)',
+              border: 'none', borderRadius: 6, cursor: 'pointer',
+            }}
+          >
+            {loading ? 'Unlocking…' : 'Unlock'}
+          </button>
+        </form>
+      )}
+    </div>
+  )
+}
+
+// @group Authentication > AuthGuard : Login gate + lock screen + inactivity timer
+function AuthGuard() {
+  const [authed, setAuthed] = useState(isAuthenticated)
+  const [locked, setLocked] = useState(false)
+  const [lockConfig, setLockConfig] = useState<{ pinConfigured: boolean; lockTimeoutMins: number | null }>({
+    pinConfigured: false,
+    lockTimeoutMins: null,
+  })
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // @group Authentication > AuthGuard : Fetch lock config after authentication
+  useEffect(() => {
+    if (!authed) return
+    function fetchConfig() {
+      api.authStatus().then(s => {
+        setLockConfig({
+          pinConfigured: s.pin_configured ?? false,
+          lockTimeoutMins: s.lock_timeout_mins ?? null,
+        })
+      }).catch(() => {})
+    }
+    fetchConfig()
+    // Re-fetch when SettingsPage signals a change
+    window.addEventListener('lock-config-updated', fetchConfig)
+    return () => window.removeEventListener('lock-config-updated', fetchConfig)
+  }, [authed])
+
+  // @group Authentication > AuthGuard : Inactivity timer — lock after N minutes idle
+  useEffect(() => {
+    if (!authed || locked || !lockConfig.lockTimeoutMins) return
+    const ms = lockConfig.lockTimeoutMins * 60 * 1000
+
+    function resetTimer() {
+      if (timerRef.current) clearTimeout(timerRef.current)
+      timerRef.current = setTimeout(() => setLocked(true), ms)
+    }
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'] as const
+    events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }))
+    resetTimer()
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+      events.forEach(e => window.removeEventListener(e, resetTimer))
+    }
+  }, [authed, locked, lockConfig])
+
+  if (!authed) {
+    return <LoginPage onAuthenticated={() => setAuthed(true)} />
+  }
+  if (locked) {
+    return (
+      <LockScreen
+        pinConfigured={lockConfig.pinConfigured}
+        onUnlocked={() => setLocked(false)}
+      />
+    )
+  }
+  return <Layout onLock={() => setLocked(true)} />
+}
+
 export default function App() {
   return (
     <BrowserRouter>
-      <Layout />
+      <AuthGuard />
     </BrowserRouter>
   )
 }

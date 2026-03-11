@@ -1,6 +1,7 @@
 // @group APIEndpoints : All fetch calls to the alter daemon REST API
 
 import type { CronRun, DaemonHealth, EnvFileEntry, LogLine, NotificationConfig, NotificationsStore, ProcessInfo, ScriptInfo, StartProcessBody } from '@/types'
+import { clearSessionToken, getSessionToken } from '@/lib/auth'
 
 // @group Types > AI : Chat message and request types (mirrored from Rust models/ai.rs)
 export interface AiChatMessage {
@@ -46,11 +47,26 @@ export interface AiModelInfo {
 
 const BASE = '/api/v1'
 
+// @group Authentication : Attach Bearer token to every request; redirect to login on 401
+function authHeaders(): Record<string, string> {
+  const token = getSessionToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders(),
+      ...(init?.headers as Record<string, string> | undefined),
+    },
   })
+  if (res.status === 401) {
+    clearSessionToken()
+    window.location.reload()
+    throw new Error('Session expired')
+  }
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
     throw new Error(data.error ?? `HTTP ${res.status}`)
@@ -60,6 +76,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 // @group APIEndpoints > Processes
 export const api = {
+  getPorts: (): Promise<{ ports: { pid: number | null; port: number; protocol: string; local_address: string; remote_address: string; state: string; process_name: string | null; ancestor_pids?: number[] }[] }> =>
+    request('/ports'),
+
+  killPort: (pid: number): Promise<{ success: boolean; error?: string }> =>
+    request(`/ports/kill/${pid}`, { method: 'POST' }),
+
   getProcesses: (): Promise<{ processes: ProcessInfo[] }> =>
     request('/processes'),
 
@@ -130,8 +152,11 @@ export const api = {
   getCronHistory: (id: string): Promise<{ runs: CronRun[] }> =>
     request(`/processes/${id}/cron/history`),
 
-  streamLogs: (id: string): EventSource =>
-    new EventSource(`${BASE}/processes/${id}/logs/stream`),
+  streamLogs: (id: string): EventSource => {
+    const token = getSessionToken()
+    const qs = token ? `?token=${encodeURIComponent(token)}` : ''
+    return new EventSource(`${BASE}/processes/${id}/logs/stream${qs}`)
+  },
 
   // @group APIEndpoints > Scripts
   saveScript: (body: { name: string; language: string; content: string }): Promise<{ path: string; name: string; filename: string; language: string }> =>
@@ -146,8 +171,11 @@ export const api = {
   deleteScript: (name: string): Promise<void> =>
     request(`/scripts/${name}`, { method: 'DELETE' }),
 
-  runScript: (name: string): EventSource =>
-    new EventSource(`${BASE}/scripts/${name}/run`),
+  runScript: (name: string): EventSource => {
+    const token = getSessionToken()
+    const qs = token ? `?token=${encodeURIComponent(token)}` : ''
+    return new EventSource(`${BASE}/scripts/${name}/run${qs}`)
+  },
 
   // @group APIEndpoints > Notifications
   getNotifications: (): Promise<NotificationsStore> =>
@@ -187,6 +215,9 @@ export const api = {
 
   shutdownDaemon: (): Promise<void> =>
     request('/system/shutdown', { method: 'POST' }),
+
+  restartDaemon: (): Promise<void> =>
+    request('/system/restart', { method: 'POST' }),
 
   // @group APIEndpoints > AI : Get stored AI settings (token is masked server-side)
   aiGetSettings: (): Promise<AiSettingsInfo> =>
@@ -264,4 +295,100 @@ export const api = {
     })()
     return abort
   },
+
+  // @group APIEndpoints > Auth : Auth status — check if password / PIN are configured
+  authStatus: (): Promise<{
+    password_configured: boolean
+    passkeys_count: number
+    pin_configured: boolean
+    lock_timeout_mins: number | null
+  }> => fetch(`${BASE}/auth/status`).then(r => r.json()),
+
+  // @group APIEndpoints > Auth : First-time password setup
+  authSetup: (password: string): Promise<{ session_token: string; expires_at: string }> =>
+    request('/auth/setup', { method: 'POST', body: JSON.stringify({ password }) }),
+
+  // @group APIEndpoints > Auth : Password login
+  authLogin: (password: string): Promise<{ session_token: string; expires_at: string }> =>
+    request('/auth/login', { method: 'POST', body: JSON.stringify({ password }) }),
+
+  // @group APIEndpoints > Auth : PIN login (lock screen quick-unlock)
+  authPinLogin: (pin: string): Promise<{ session_token: string; expires_at: string }> =>
+    request('/auth/pin/login', { method: 'POST', body: JSON.stringify({ pin }) }),
+
+  // @group APIEndpoints > Auth : Logout — invalidate session
+  authLogout: (): Promise<{ success: boolean }> =>
+    request('/auth/session', { method: 'DELETE' }),
+
+  // @group APIEndpoints > Auth : Change password (requires current password)
+  authChangePassword: (currentPassword: string, newPassword: string): Promise<{ success: boolean }> =>
+    request('/auth/change-password', { method: 'POST', body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }) }),
+
+  // @group APIEndpoints > Auth : Set or update PIN (4 or 6 digits)
+  authSetPin: (pin: string): Promise<{ success: boolean }> =>
+    request('/auth/pin', { method: 'POST', body: JSON.stringify({ pin }) }),
+
+  // @group APIEndpoints > Auth : Remove PIN
+  authRemovePin: (): Promise<{ success: boolean }> =>
+    request('/auth/pin', { method: 'DELETE' }),
+
+  // @group APIEndpoints > Auth : Update auto-lock timeout
+  authUpdateLockSettings: (lockTimeoutMins: number | null): Promise<{ success: boolean }> =>
+    request('/auth/settings', { method: 'PATCH', body: JSON.stringify({ lock_timeout_mins: lockTimeoutMins }) }),
+
+  // @group APIEndpoints > Auth : Begin passkey registration
+  passkeyRegisterStart: (): Promise<object> =>
+    request('/auth/passkey/register/start', { method: 'POST' }),
+
+  // @group APIEndpoints > Auth : Finish passkey registration
+  passkeyRegisterFinish: (credential: object, name: string): Promise<{ success: boolean }> =>
+    request('/auth/passkey/register/finish', { method: 'POST', body: JSON.stringify({ credential, name }) }),
+
+  // @group APIEndpoints > Auth : Begin passkey login assertion
+  passkeyLoginStart: (): Promise<object> =>
+    request('/auth/passkey/login/start', { method: 'POST' }),
+
+  // @group APIEndpoints > Auth : Finish passkey login assertion
+  passkeyLoginFinish: (credential: object): Promise<{ session_token: string; expires_at: string }> =>
+    request('/auth/passkey/login/finish', { method: 'POST', body: JSON.stringify(credential) }),
+
+  // @group APIEndpoints > Auth : Delete a registered passkey
+  passkeyDelete: (name: string): Promise<{ success: boolean }> =>
+    request(`/auth/passkey/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+
+  // @group APIEndpoints > Telegram : Get Telegram bot config (token is masked)
+  getTelegramConfig: (): Promise<{
+    enabled: boolean
+    bot_token_hint: string | null
+    bot_token_set: boolean
+    allowed_chat_ids: number[]
+    notify_on_crash: boolean
+    notify_on_start: boolean
+    notify_on_stop: boolean
+    notify_on_restart: boolean
+  }> => request('/telegram'),
+
+  // @group APIEndpoints > Telegram : Update Telegram bot config
+  updateTelegramConfig: (cfg: {
+    enabled?: boolean
+    bot_token?: string
+    allowed_chat_ids?: number[]
+    notify_on_crash?: boolean
+    notify_on_start?: boolean
+    notify_on_stop?: boolean
+    notify_on_restart?: boolean
+  }): Promise<{ success: boolean }> =>
+    request('/telegram', { method: 'PUT', body: JSON.stringify(cfg) }),
+
+  // @group APIEndpoints > Telegram : Send a test message to the first allowed chat
+  testTelegram: (): Promise<{ success: boolean; message: string }> =>
+    request('/telegram/test', { method: 'POST' }),
+
+  // @group APIEndpoints > Telegram : Validate the bot token and return bot username
+  getTelegramBotInfo: (): Promise<{
+    ok: boolean
+    username: string | null
+    first_name: string | null
+    error: string | null
+  }> => request('/telegram/botinfo'),
 }
