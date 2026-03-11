@@ -9,6 +9,7 @@ pub mod logging;
 pub mod models;
 pub mod notifications;
 pub mod process;
+pub mod telegram;
 pub mod utils;
 pub mod web;
 

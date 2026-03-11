@@ -22,6 +22,10 @@ impl ApiError {
     pub fn internal(msg: impl ToString) -> Self {
         Self { status: StatusCode::INTERNAL_SERVER_ERROR, message: msg.to_string() }
     }
+
+    pub fn unauthorized(msg: impl ToString) -> Self {
+        Self { status: StatusCode::UNAUTHORIZED, message: msg.to_string() }
+    }
 }
 
 impl IntoResponse for ApiError {

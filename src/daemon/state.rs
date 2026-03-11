@@ -1,13 +1,16 @@
 // @group DatabaseOperations : Daemon shared state — process registry with disk persistence
 
+use crate::config::auth_config::AuthConfig;
 use crate::config::daemon_config::DaemonConfig;
 use crate::config::ecosystem::AppConfig;
 use crate::config::notification_store::NotificationsStore;
+use crate::config::telegram_config::TelegramConfig;
 use crate::models::cron_run::CronRun;
 use crate::models::process_info::ProcessInfo;
 use crate::process::manager::ProcessManager;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -50,17 +53,34 @@ pub struct DaemonState {
     pub notifications: Arc<RwLock<NotificationsStore>>,
     /// Ephemeral GitHub Device Flow auth state — cleared after successful login or expiry
     pub ai_device_auth: Arc<tokio::sync::Mutex<Option<crate::models::ai::DeviceAuthState>>>,
+
+    // @group Authentication : Session and auth state
+    /// Active browser sessions: token → expiry timestamp
+    pub sessions: Arc<DashMap<String, DateTime<Utc>>>,
+    /// Auth config (password hash, master token, stored passkeys) — guarded for write access
+    pub auth: Arc<RwLock<AuthConfig>>,
+
+    // @group Configuration : Telegram bot config — guarded for hot reload
+    pub telegram: Arc<RwLock<TelegramConfig>>,
 }
 
 impl DaemonState {
     pub fn new(config: DaemonConfig) -> Self {
         let notifications = Arc::new(RwLock::new(crate::config::notification_store::load()));
+
+        let auth_cfg = crate::config::auth_config::load();
+
+        let telegram_cfg = crate::config::telegram_config::load();
+
         Self {
             manager: ProcessManager::new(Arc::clone(&notifications)),
             config,
             started_at: Utc::now(),
             notifications,
             ai_device_auth: Arc::new(tokio::sync::Mutex::new(None)),
+            sessions: Arc::new(DashMap::new()),
+            auth: Arc::new(RwLock::new(auth_cfg)),
+            telegram: Arc::new(RwLock::new(telegram_cfg)),
         }
     }
 
@@ -98,8 +118,6 @@ impl DaemonState {
             let tmp = path.with_extension("json.tmp");
             std::fs::write(&tmp, &content)?;
             if std::fs::rename(&tmp, &path).is_err() {
-                // Rename failed (Windows sharing violation etc.) — fall back to direct write.
-                // Slightly less atomic, but the file contents will always be valid JSON.
                 let _ = std::fs::remove_file(&tmp);
                 std::fs::write(&path, &content)?;
             }
