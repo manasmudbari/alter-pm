@@ -39,8 +39,7 @@ export default function ProcessesPage({ processes, reload, settings }: Props) {
 
   const loadPorts = useCallback(async () => {
     try {
-      const res  = await fetch('/api/v1/ports')
-      const data = await res.json()
+      const data = await api.getPorts()
       setPortData(data.ports ?? [])
     } catch { /* port fetch is best-effort */ }
   }, [])

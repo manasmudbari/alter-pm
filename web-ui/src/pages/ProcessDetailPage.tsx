@@ -25,7 +25,10 @@ export default function ProcessDetailPage({ reload, settings }: Props) {
   const [streamFilter, setStreamFilter] = useState<'all' | 'stdout' | 'stderr'>('all')
   const [textFilter, setTextFilter] = useState('')
   const [envOpen, setEnvOpen] = useState(false)
+  const [sliderPos, setSliderPos] = useState(1000) // 0–1000 = 0%–100% of scroll, starts pinned to bottom
   const logEndRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const atBottomRef = useRef(true) // tracks whether user is pinned to bottom
   const esRef = useRef<EventSource | null>(null)
   const { dialogState, confirm, danger, alert, handleConfirm, handleCancel } = useDialog()
 
@@ -52,6 +55,7 @@ export default function ProcessDetailPage({ reload, settings }: Props) {
     // Stop existing SSE
     if (esRef.current) { esRef.current.close(); esRef.current = null }
     setLogLines([])
+    atBottomRef.current = true // re-pin on every fresh load
 
     const isToday = dateIndex === -1
     const dateParam = isToday ? undefined : logDates[dateIndex]
@@ -77,9 +81,35 @@ export default function ProcessDetailPage({ reload, settings }: Props) {
     return () => { if (esRef.current) { esRef.current.close(); esRef.current = null } }
   }, [id, dateIndex, logDates, settings.logTailLines])
 
-  // Auto-scroll to bottom
+  // @group BusinessLogic > LogScroll : Track pin state + keep slider in sync with manual scrolling
+  function handleLogScroll() {
+    const el = scrollRef.current
+    if (!el) return
+    const maxScroll = el.scrollHeight - el.clientHeight
+    atBottomRef.current = maxScroll - el.scrollTop < 60
+    // Sync slider with manual scroll position (today only)
+    if (dateIndex === -1 && maxScroll > 0) {
+      setSliderPos(Math.round((el.scrollTop / maxScroll) * 1000))
+    }
+  }
+
+  // @group BusinessLogic > LogScroll : Seek to slider position
+  function handleSlider(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = Number(e.target.value)
+    setSliderPos(val)
+    const el = scrollRef.current
+    if (!el) return
+    const atEnd = val >= 1000
+    atBottomRef.current = atEnd
+    el.scrollTop = (val / 1000) * (el.scrollHeight - el.clientHeight)
+  }
+
+  // Auto-scroll to bottom + pin slider to right when new lines arrive and already pinned
   useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (atBottomRef.current) {
+      logEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      setSliderPos(1000)
+    }
   }, [logLines])
 
   if (!process) return <div style={{ padding: 24, color: 'var(--color-muted-foreground)' }}>Loading…</div>
@@ -93,6 +123,10 @@ export default function ProcessDetailPage({ reload, settings }: Props) {
     (streamFilter === 'all' || l.stream === streamFilter) &&
     (needle === '' || l.content.toLowerCase().includes(needle))
   )
+
+  // @group BusinessLogic > LogSlider : Timestamp label at current slider seek position
+  const sliderLineIdx = Math.round((sliderPos / 1000) * Math.max(0, visibleLines.length - 1))
+  const sliderTimestamp = visibleLines[sliderLineIdx]?.timestamp?.slice(11, 19) ?? ''
 
   async function doStart() {
     await api.startStopped(process!.id).catch(() => {})
@@ -212,6 +246,31 @@ export default function ProcessDetailPage({ reload, settings }: Props) {
         </div>
       </div>
 
+      {/* Time scrubber — today only, shown when logs are loaded */}
+      {isToday && visibleLines.length > 1 && (
+        <div style={{
+          padding: '5px 16px 6px', borderBottom: '1px solid var(--color-border)',
+          background: 'var(--color-card)', flexShrink: 0,
+        }}>
+          <input
+            type="range" min={0} max={1000} value={sliderPos}
+            onChange={handleSlider}
+            style={{ width: '100%', accentColor: 'var(--color-primary)', cursor: 'pointer', display: 'block', margin: 0 }}
+          />
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            fontSize: 10, color: 'var(--color-muted-foreground)', marginTop: 3,
+            fontVariantNumeric: 'tabular-nums',
+          }}>
+            <span>{visibleLines[0]?.timestamp?.slice(11, 19) ?? ''}</span>
+            <span style={{ color: sliderPos >= 990 ? 'var(--color-status-running)' : 'var(--color-primary)' }}>
+              {sliderPos >= 990 ? '● live' : `▸ ${sliderTimestamp}`}
+            </span>
+            <span>{visibleLines[visibleLines.length - 1]?.timestamp?.slice(11, 19) ?? ''}</span>
+          </div>
+        </div>
+      )}
+
       {/* Text search bar */}
       <div style={{
         padding: '5px 16px', borderBottom: '1px solid var(--color-border)',
@@ -246,7 +305,7 @@ export default function ProcessDetailPage({ reload, settings }: Props) {
       </div>
 
       {/* Log output */}
-      <div style={{ flex: 1, overflow: 'auto', padding: '10px 16px', background: 'var(--color-background)' }}>
+      <div ref={scrollRef} onScroll={handleLogScroll} style={{ flex: 1, overflow: 'auto', padding: '10px 16px', background: 'var(--color-background)' }}>
         <div className="log-output">
           {visibleLines.map((line, i) => (
             <div key={i} className={line.stream === 'stderr' ? 'log-line-err' : 'log-line-out'}>

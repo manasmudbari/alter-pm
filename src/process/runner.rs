@@ -12,10 +12,14 @@ use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-// @group BusinessLogic > Windows : CREATE_NO_WINDOW flag — hides the console window
-// that Windows would otherwise pop up for every spawned child process.
+// @group BusinessLogic > Windows : Process creation flags
+// CREATE_NO_WINDOW  — hides the console window for every spawned child.
+// CREATE_BREAKAWAY_FROM_JOB — removes the child from the daemon's Windows Job Object so
+//   managed processes survive a daemon restart without being killed by the OS.
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+#[cfg(target_os = "windows")]
+const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
 
 /// Result of a child process run: the exit code (or None on signal/kill)
 pub struct RunResult {
@@ -44,14 +48,14 @@ pub async fn spawn_process(
         if is_native {
             let mut c = Command::new(script);
             c.args(args);
-            c.creation_flags(CREATE_NO_WINDOW);
+            c.creation_flags(CREATE_NO_WINDOW | CREATE_BREAKAWAY_FROM_JOB);
             c
         } else {
             let mut c = Command::new("cmd");
             c.arg("/C");
             c.arg(script);
             c.args(args);
-            c.creation_flags(CREATE_NO_WINDOW);
+            c.creation_flags(CREATE_NO_WINDOW | CREATE_BREAKAWAY_FROM_JOB);
             c
         }
     };

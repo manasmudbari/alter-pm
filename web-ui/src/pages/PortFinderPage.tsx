@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { RefreshCw, Search, X, XCircle } from 'lucide-react'
+import { api } from '@/lib/api'
 
 // @group Types > Ports : Port entry returned by GET /api/v1/ports
 interface PortEntry {
@@ -16,16 +17,13 @@ interface PortEntry {
 
 // @group Utilities > Ports : Fetch full port list from the daemon
 async function fetchPorts(): Promise<PortEntry[]> {
-  const res = await fetch('/api/v1/ports')
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const data = await res.json()
+  const data = await api.getPorts()
   return data.ports ?? []
 }
 
 // @group Utilities > Ports : Kill a process by PID
 async function killPid(pid: number): Promise<{ success: boolean; error?: string }> {
-  const res = await fetch(`/api/v1/ports/kill/${pid}`, { method: 'POST' })
-  return res.json()
+  return api.killPort(pid)
 }
 
 // @group Utilities > Ports : Returns color for connection state label

@@ -236,6 +236,7 @@ impl ProcessManager {
         tokio::spawn(async move {
             let store = notif.read().await;
             fire_event(&store, &info_clone, ProcessEvent::Stopped).await;
+            crate::telegram::commands::fire_telegram_notification(&info_clone, ProcessEvent::Stopped).await;
         });
 
         Ok(info_for_notif)
@@ -428,9 +429,11 @@ impl ProcessManager {
 
         // Fire Started notification (non-blocking)
         let notif = Arc::clone(&self.notifications);
+        let info_for_tg = info_for_notif.clone();
         tokio::spawn(async move {
             let store = notif.read().await;
             fire_event(&store, &info_for_notif, ProcessEvent::Started).await;
+            crate::telegram::commands::fire_telegram_notification(&info_for_tg, ProcessEvent::Started).await;
         });
 
         // @group BusinessLogic > Hooks : Run post_start hook after process is running (non-blocking)
@@ -590,9 +593,11 @@ impl ProcessManager {
                                     };
                                     // Fire Restarted notification (non-blocking)
                                     let notif2 = Arc::clone(&notifications);
+                                    let info_for_tg = info_for_notif.clone();
                                     tokio::spawn(async move {
                                         let store = notif2.read().await;
                                         fire_event(&store, &info_for_notif, ProcessEvent::Restarted).await;
+                                        crate::telegram::commands::fire_telegram_notification(&info_for_tg, ProcessEvent::Restarted).await;
                                     });
                                     let restart_count = { arc.read().await.restart_count };
                                     tokio::spawn(async move {
@@ -615,9 +620,11 @@ impl ProcessManager {
                                         proc.status = ProcessStatus::Errored;
                                         let info_for_notif = proc.to_info();
                                         let notif2 = Arc::clone(&notifications);
+                                        let info_for_tg = info_for_notif.clone();
                                         tokio::spawn(async move {
                                             let store = notif2.read().await;
                                             fire_event(&store, &info_for_notif, ProcessEvent::Crashed).await;
+                                            crate::telegram::commands::fire_telegram_notification(&info_for_tg, ProcessEvent::Crashed).await;
                                         });
                                     }
                                 }
@@ -662,9 +669,11 @@ impl ProcessManager {
                             proc.to_info()
                         };
                         let notif2 = Arc::clone(&notifications);
+                        let info_for_tg = info_for_notif.clone();
                         tokio::spawn(async move {
                             let store = notif2.read().await;
                             fire_event(&store, &info_for_notif, ProcessEvent::Crashed).await;
+                            crate::telegram::commands::fire_telegram_notification(&info_for_tg, ProcessEvent::Crashed).await;
                         });
                     }
                 }
@@ -773,6 +782,7 @@ impl ProcessManager {
                                     if let Some(info) = info_for_fail {
                                         let store = notif_exit.read().await;
                                         fire_event(&store, &info, ProcessEvent::CronFailed).await;
+                                        crate::telegram::commands::fire_telegram_notification(&info, ProcessEvent::CronFailed).await;
                                     }
                                 }
                             }
@@ -805,9 +815,11 @@ impl ProcessManager {
                             };
                             // Fire CronRun notification when cron job starts (non-blocking)
                             let notif3 = Arc::clone(&notif_cron);
+                            let info_for_tg = info_for_notif.clone();
                             tokio::spawn(async move {
                                 let store = notif3.read().await;
                                 fire_event(&store, &info_for_notif, ProcessEvent::CronRun).await;
+                                crate::telegram::commands::fire_telegram_notification(&info_for_tg, ProcessEvent::CronRun).await;
                             });
 
                             let restart_count = { arc.read().await.restart_count };
@@ -842,9 +854,11 @@ impl ProcessManager {
                                 proc.to_info()
                             };
                             let notif3 = Arc::clone(&notif_cron);
+                            let info_for_tg = info_for_notif.clone();
                             tokio::spawn(async move {
                                 let store = notif3.read().await;
                                 fire_event(&store, &info_for_notif, ProcessEvent::CronFailed).await;
+                                crate::telegram::commands::fire_telegram_notification(&info_for_tg, ProcessEvent::CronFailed).await;
                             });
                         }
                     }

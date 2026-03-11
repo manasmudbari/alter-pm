@@ -25,6 +25,7 @@ pub fn router(state: Arc<DaemonState>) -> Router {
         .route("/save", post(save_state))
         .route("/resurrect", post(resurrect_state))
         .route("/shutdown", post(shutdown))
+        .route("/restart", post(restart))
         .with_state(state)
 }
 
@@ -307,4 +308,53 @@ async fn shutdown(State(state): State<Arc<DaemonState>>) -> Json<Value> {
         std::process::exit(0);
     });
     Json(json!({ "success": true, "message": "daemon shutting down" }))
+}
+
+// @group APIEndpoints > System : POST /system/restart
+// Saves state, spawns a delayed self-restart, then exits.
+// Managed processes survive because runner uses CREATE_BREAKAWAY_FROM_JOB on Windows.
+async fn restart(State(state): State<Arc<DaemonState>>) -> Json<Value> {
+    let port = state.config.port;
+    tokio::spawn(async move {
+        let _ = state.save_to_disk().await;
+        crate::utils::pid::remove_pid_file();
+
+        // Spawn a detached process that waits for the port to free, then restarts the daemon.
+        if let Ok(exe) = std::env::current_exe() {
+            #[cfg(target_os = "windows")]
+            {
+                use std::os::windows::process::CommandExt;
+                const CREATE_NO_WINDOW: u32 = 0x08000000;
+                const DETACHED_PROCESS: u32 = 0x00000008;
+                let cmd = format!(
+                    "timeout /t 1 /nobreak >nul 2>&1 && \"{}\" --port {} daemon start",
+                    exe.display(), port
+                );
+                let _ = std::process::Command::new("cmd")
+                    .args(["/C", &cmd])
+                    .stdin(std::process::Stdio::null())
+                    .stdout(std::process::Stdio::null())
+                    .stderr(std::process::Stdio::null())
+                    .creation_flags(CREATE_NO_WINDOW | DETACHED_PROCESS)
+                    .spawn();
+            }
+            #[cfg(not(target_os = "windows"))]
+            {
+                let cmd = format!(
+                    "sleep 1 && \"{}\" --port {} daemon start",
+                    exe.display(), port
+                );
+                let _ = std::process::Command::new("sh")
+                    .args(["-c", &cmd])
+                    .stdin(std::process::Stdio::null())
+                    .stdout(std::process::Stdio::null())
+                    .stderr(std::process::Stdio::null())
+                    .spawn();
+            }
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
+        std::process::exit(0);
+    });
+    Json(json!({ "success": true, "message": "daemon restarting" }))
 }
