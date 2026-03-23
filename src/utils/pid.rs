@@ -39,7 +39,8 @@ fn process_exists(pid: u32) -> bool {
     }
     #[cfg(not(target_os = "windows"))]
     {
-        // On Linux/Mac, check if /proc/<pid> exists or send signal 0
-        std::path::Path::new(&format!("/proc/{pid}")).exists()
+        // Send signal 0 to check if process exists — works on Linux and macOS.
+        // kill(pid, 0) returns 0 if the process exists and we have permission.
+        unsafe { libc::kill(pid as libc::pid_t, 0) == 0 }
     }
 }

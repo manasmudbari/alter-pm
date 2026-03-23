@@ -1,0 +1,256 @@
+# alter — macOS Release Workflow
+# Triggers on version tags (v*) → builds macOS binaries (x86_64 + arm64) → packages tarballs → attaches to GitHub Release
+# https://github.com/thechandanbhagat/alter-pm
+
+name: Release (macOS)
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  BINARY_NAME: alter
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Build web UI (shared asset, embedded into the binary via rust-embed)
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-web-ui:
+    name: Build Web UI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web-ui/package-lock.json
+
+      - name: Build web UI
+        run: |
+          cd web-ui
+          npm ci
+          npm run build
+
+      - name: Upload web UI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-ui-dist
+          path: web-ui/dist/
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Build macOS x86_64 binary
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-macos-x86_64:
+    name: Build (macOS x86_64)
+    runs-on: macos-latest
+    needs: build-web-ui
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore web UI
+        uses: actions/download-artifact@v4
+        with:
+          name: web-ui-dist
+          path: web-ui/dist/
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: macos-x86_64-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: macos-x86_64-cargo-
+
+      - name: Build release binary
+        run: cargo build --release --target x86_64-apple-darwin
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: alter-macos-x86_64
+          path: target/x86_64-apple-darwin/release/alter
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Build macOS arm64 (Apple Silicon) binary
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-macos-arm64:
+    name: Build (macOS arm64)
+    runs-on: macos-latest
+    needs: build-web-ui
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore web UI
+        uses: actions/download-artifact@v4
+        with:
+          name: web-ui-dist
+          path: web-ui/dist/
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: macos-arm64-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: macos-arm64-cargo-
+
+      - name: Build release binary
+        run: cargo build --release --target aarch64-apple-darwin
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: alter-macos-arm64
+          path: target/aarch64-apple-darwin/release/alter
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Package: create tarballs and attach to GitHub Release
+  # ─────────────────────────────────────────────────────────────────────────────
+  package-macos:
+    name: Package macOS tarballs
+    runs-on: ubuntu-latest
+    needs: [build-macos-x86_64, build-macos-arm64]
+
+    outputs:
+      version:          ${{ steps.version.outputs.VERSION }}
+      sha256_x86_64:    ${{ steps.sha256.outputs.SHA256_X86_64 }}
+      sha256_arm64:     ${{ steps.sha256.outputs.SHA256_ARM64 }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Download x86_64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: alter-macos-x86_64
+          path: binaries/x86_64/
+
+      - name: Download arm64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: alter-macos-arm64
+          path: binaries/arm64/
+
+      - name: Make binaries executable
+        run: |
+          chmod +x binaries/x86_64/alter
+          chmod +x binaries/arm64/alter
+
+      - name: Create tarballs
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          mkdir -p dist
+
+          # x86_64
+          mkdir -p pkg/x86_64
+          cp binaries/x86_64/alter pkg/x86_64/alter
+          tar -czf "dist/alter-${VERSION}-macos-x86_64.tar.gz" -C pkg/x86_64 alter
+
+          # arm64
+          mkdir -p pkg/arm64
+          cp binaries/arm64/alter pkg/arm64/alter
+          tar -czf "dist/alter-${VERSION}-macos-arm64.tar.gz" -C pkg/arm64 alter
+
+      - name: Compute SHA256 checksums
+        id: sha256
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          SHA256_X86_64=$(sha256sum "dist/alter-${VERSION}-macos-x86_64.tar.gz" | awk '{print $1}')
+          SHA256_ARM64=$(sha256sum  "dist/alter-${VERSION}-macos-arm64.tar.gz"  | awk '{print $1}')
+          echo "SHA256_X86_64=$SHA256_X86_64" >> "$GITHUB_OUTPUT"
+          echo "SHA256_ARM64=$SHA256_ARM64"   >> "$GITHUB_OUTPUT"
+          echo "x86_64: $SHA256_X86_64"
+          echo "arm64:  $SHA256_ARM64"
+
+      - name: Upload tarballs as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: alter-macos-tarballs
+          path: dist/
+
+      - name: Attach tarballs to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.tar.gz
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Update Homebrew formula in the tap repository
+  # ─────────────────────────────────────────────────────────────────────────────
+  update-homebrew-formula:
+    name: Update Homebrew Formula
+    runs-on: ubuntu-latest
+    needs: package-macos
+    # Only run if HOMEBREW_TAP_TOKEN secret is configured
+    if: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
+
+    steps:
+      - name: Checkout tap repository
+        uses: actions/checkout@v4
+        with:
+          repository: manasmudbari/homebrew-alter
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update formula version and checksums
+        env:
+          VERSION:       ${{ needs.package-macos.outputs.version }}
+          SHA256_X86_64: ${{ needs.package-macos.outputs.sha256_x86_64 }}
+          SHA256_ARM64:  ${{ needs.package-macos.outputs.sha256_arm64 }}
+        run: |
+          FORMULA="homebrew-tap/Formula/alter.rb"
+
+          # Update version
+          sed -i "s/version \"[^\"]*\"/version \"${VERSION}\"/" "$FORMULA"
+
+          # Update x86_64 URL and sha256
+          sed -i "s|alter-[^/]*/alter-[0-9.]\\+-macos-x86_64.tar.gz|alter-${VERSION}/alter-${VERSION}-macos-x86_64.tar.gz|" "$FORMULA"
+          sed -i '/on_intel/,/end/{s/sha256 "[a-f0-9]*"/sha256 "'"${SHA256_X86_64}"'"/}' "$FORMULA"
+
+          # Update arm64 URL and sha256
+          sed -i "s|alter-[^/]*/alter-[0-9.]\\+-macos-arm64.tar.gz|alter-${VERSION}/alter-${VERSION}-macos-arm64.tar.gz|" "$FORMULA"
+          sed -i '/on_arm/,/end/{s/sha256 "[a-f0-9]*"/sha256 "'"${SHA256_ARM64}"'"/}' "$FORMULA"
+
+      - name: Commit and push updated formula
+        run: |
+          cd homebrew-tap
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/alter.rb
+          git commit -m "alter ${{ needs.package-macos.outputs.version }}" || echo "Nothing to commit"
+          git push
