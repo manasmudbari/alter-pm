@@ -1,0 +1,32 @@
+Architectures: amd64 arm64
+Codename: stable
+Components: main
+Date: Mon, 23 Mar 2026 23:53:24 +0000
+Description: alter process manager APT repository
+Label: alter
+Origin: alter
+Suite: stable
+MD5Sum:
+ 3e5531438236a2aadbf6f0a34aaaf39d              190 Release
+ 7a015ba74189ebc7f332c0dcef384412              789 main/binary-amd64/Packages
+ 5360f0d50eecef05bc5cba63337b049d              569 main/binary-amd64/Packages.gz
+ 38a1e4812f44955facf51cbd0effa4ff              789 main/binary-arm64/Packages
+ 5719c27b283afb5a144628f177a6e1cf              569 main/binary-arm64/Packages.gz
+SHA1:
+ fa40c90651928c3da3d1b4e527d6df484cf5c658              190 Release
+ ad1ab89f5f12f80cbb60d09f4f567756df626178              789 main/binary-amd64/Packages
+ 25174ec3f212c53f8ea3878b5ccef125105a0839              569 main/binary-amd64/Packages.gz
+ 7e2ee487b36617e9533da6a9c4d8c887aca5d086              789 main/binary-arm64/Packages
+ 7363762c3821bd68e6c93af480825df238265280              569 main/binary-arm64/Packages.gz
+SHA256:
+ d0763822d97281d5a5f4c82cc0b5fa6079a0b7a97a6d844656af9f2f35d8b732              190 Release
+ 008d5b138d7831a5d43bd737308551d705e0cb0d5eaeca9cc550a7fcdac866a7              789 main/binary-amd64/Packages
+ 5bc462e2d8d8fe65d4ecdd66a8721a187f0896ddc291222bb156e7718792ec09              569 main/binary-amd64/Packages.gz
+ e5ab9960820d7a55df79ea25611197f0cc76ec5bb1866e7848cd0c6d84101e3a              789 main/binary-arm64/Packages
+ dc19b347e2f099472f9f4c5a57f1784f40065c5d1441f4b2b466c27b7ec394c1              569 main/binary-arm64/Packages.gz
+SHA512:
+ dba37fcb01a6bf62f412bf278d6a0e7bf45cfedadb306502cb0c290b337828a23e3911516c548562841da7737363ba4a3f85254d12182f7c68768277df54c56e              190 Release
+ 0e614f7f5c4063ecc1cb40afc6fda1eadcb152f6807947892d32e26508611e08a08d1fb5cd1fb40b6dd81a88343348baedd2f2493a1d42c541420b8c03871f9a              789 main/binary-amd64/Packages
+ 34a36f1255ef7e0f4001de13ea28f1df58841c01df7f8208caf9518750c4bda643d477083c0530db6143c79ffdf983afa16faa8fd1313bc3a26ba1abeb5cd4c4              569 main/binary-amd64/Packages.gz
+ 28af1001fed6cbeaf0ddcbcab2945cbb93fa05d84a22295ccb6d6985b3018200edf3e43f417a3d808b6548942709a475ebac756356c9c4911c0996668e450ae7              789 main/binary-arm64/Packages
+ f75090230c5cafe7f67e5c424b7eadf42952ecf29a6d605fbaf51146131a193ade130913a60da85f3fa9fd8076d1ab5f5e6c4e418a03d23ae35c915994815773              569 main/binary-arm64/Packages.gz

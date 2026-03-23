@@ -1,0 +1,21 @@
+Package: alter
+Version: 0.7.0-macos-test
+Architecture: arm64
+Maintainer: thechandanbhagat <thechandanbhagat@gmail.com>
+Installed-Size: 7832
+Depends: libc6 (>= 2.17)
+Filename: pool/main/alter_0.7.0-macos-test_arm64.deb
+Size: 2961594
+MD5sum: d699598b58531e52de22e478ed786e3a
+SHA1: 0b4338531b79814cd0287894f733a6108f5549ef
+SHA256: 991f99edd638cf025989df4ba72268b22a94c0fe33765404ae2bbd9fe3a1e126
+Section: utils
+Priority: optional
+Homepage: https://github.com/thechandanbhagat/alter-pm
+Description: A process manager for your developers
+ Run and manage any application — Python, Node.js, Go, Rust, .NET, PHP —
+ from a single binary with a built-in web dashboard.
+ .
+ Features: auto-restart, watch mode, namespaces, live log streaming,
+ state persistence, ecosystem config, full REST API.
+
