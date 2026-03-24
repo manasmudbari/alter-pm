@@ -5,10 +5,10 @@ Maintainer: thechandanbhagat <thechandanbhagat@gmail.com>
 Installed-Size: 7832
 Depends: libc6 (>= 2.17)
 Filename: pool/main/alter_0.7.0-macos-test_arm64.deb
-Size: 2961594
-MD5sum: d699598b58531e52de22e478ed786e3a
-SHA1: 0b4338531b79814cd0287894f733a6108f5549ef
-SHA256: 991f99edd638cf025989df4ba72268b22a94c0fe33765404ae2bbd9fe3a1e126
+Size: 2961604
+MD5sum: e02b6196dd6f61962d754b119f5423a9
+SHA1: 4236d9f5184bef4729c85de0efd810fdc175e5e9
+SHA256: d1c9d021abcf18fd27e560cda2c3d6f4b72b41a67f44d534b9f5977a0889b749
 Section: utils
 Priority: optional
 Homepage: https://github.com/thechandanbhagat/alter-pm
