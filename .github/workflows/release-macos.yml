@@ -222,19 +222,21 @@ jobs:
     name: Update Homebrew Formula
     runs-on: ubuntu-latest
     needs: package-macos
-    # Only run if HOMEBREW_TAP_TOKEN secret is configured
-    if: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
-
     steps:
       - name: Checkout tap repository
+        if: ${{ env.HOMEBREW_TAP_TOKEN != '' }}
         uses: actions/checkout@v4
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         with:
           repository: manasmudbari/homebrew-alter
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           path: homebrew-tap
 
       - name: Update formula version and checksums
+        if: ${{ env.HOMEBREW_TAP_TOKEN != '' }}
         env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           VERSION:       ${{ needs.package-macos.outputs.version }}
           SHA256_X86_64: ${{ needs.package-macos.outputs.sha256_x86_64 }}
           SHA256_ARM64:  ${{ needs.package-macos.outputs.sha256_arm64 }}
@@ -253,6 +255,9 @@ jobs:
           sed -i '/on_arm/,/end/{s/sha256 "[a-f0-9]*"/sha256 "'"${SHA256_ARM64}"'"/}' "$FORMULA"
 
       - name: Commit and push updated formula
+        if: ${{ env.HOMEBREW_TAP_TOKEN != '' }}
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           cd homebrew-tap
           git config user.name  "github-actions[bot]"
