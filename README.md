@@ -1,26 +1,42 @@
 # alter — Process Manager
 
-> A fast, lightweight process manager for Windows (and cross-platform). Run and manage any application — Python, Node.js, Go, Rust, .NET, PHP — from a single binary with a built-in web dashboard.
+> A fast, lightweight process manager for Windows, macOS, and Linux. Run and manage any application — Python, Node.js, Go, Rust, .NET, PHP — from a single binary with a built-in web dashboard.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![Built with Rust](https://img.shields.io/badge/Built%20with-Rust-orange.svg)](https://www.rust-lang.org/)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)]()
 [![winget](https://img.shields.io/badge/winget-thechandanbhagat.alter-blue?logo=windows)](https://github.com/microsoft/winget-pkgs)
+[![homebrew](https://img.shields.io/badge/homebrew-thechandanbhagat%2Falter-orange?logo=homebrew)](https://github.com/thechandanbhagat/homebrew-alter)
 
 ---
 
 ## Installation
 
-### WinGet (recommended)
+### macOS — Homebrew
+
+```bash
+brew tap thechandanbhagat/alter
+brew install alter
+```
+
+### Windows — WinGet
 
 ```powershell
 winget install thechandanbhagat.alter
 ```
 
-### Manual installer
+### Windows — Manual installer
 
-Download the latest `alter-x.x.x-windows-x64-setup.exe` from [Releases](https://github.com/thechandanbhagat/alter-pm/releases) and run it.  
+Download the latest `alter-x.x.x-windows-x64-setup.exe` from [Releases](https://github.com/thechandanbhagat/alter-pm/releases) and run it.
 `alter.exe` is added to your `PATH` automatically.
+
+### Linux — APT
+
+```bash
+curl -fsSL https://thechandanbhagat.github.io/alter-pm/gpg-key.asc | sudo gpg --dearmor -o /usr/share/keyrings/alter.gpg
+echo "deb [signed-by=/usr/share/keyrings/alter.gpg] https://thechandanbhagat.github.io/alter-pm/apt stable main" | sudo tee /etc/apt/sources.list.d/alter.list
+sudo apt update && sudo apt install alter
+```
 
 ---
 
@@ -44,13 +60,14 @@ Download the latest `alter-x.x.x-windows-x64-setup.exe` from [Releases](https://
 
 ### Build from source
 
-Requires [Rust](https://rustup.rs/).
+Requires [Rust](https://rustup.rs/) and [Node.js 18+](https://nodejs.org/).
 
-```powershell
+```bash
 git clone https://github.com/thechandanbhagat/alter-pm
 cd alter-pm
+cd web-ui && npm ci && npm run build && cd ..
 cargo build --release
-# Binary: target\release\alter.exe
+# Binary: target/release/alter  (target\release\alter.exe on Windows)
 ```
 
 ---
@@ -77,6 +94,12 @@ alter web    # → http://127.0.0.1:2999/
 ```
 
 ---
+
+## macOS
+
+- Supports Intel (x86_64) and Apple Silicon (arm64)
+- `alter startup` sets up a launchd LaunchAgent for auto-start on login
+- Data stored in `~/.alter-pm2/`
 
 ## Windows
 

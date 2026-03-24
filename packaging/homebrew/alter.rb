@@ -16,12 +16,12 @@ class Alter < Formula
 
   on_macos do
     on_intel do
-      url "https://github.com/thechandanbhagat/alter-pm/releases/download/v#{version}/alter-#{version}-macos-x86_64.tar.gz"
+      url "https://github.com/manasmudbari/alter-pm/releases/download/v#{version}/alter-#{version}-macos-x86_64.tar.gz"
       sha256 "PLACEHOLDER_X86_64_SHA256"
     end
 
     on_arm do
-      url "https://github.com/thechandanbhagat/alter-pm/releases/download/v#{version}/alter-#{version}-macos-arm64.tar.gz"
+      url "https://github.com/manasmudbari/alter-pm/releases/download/v#{version}/alter-#{version}-macos-arm64.tar.gz"
       sha256 "PLACEHOLDER_ARM64_SHA256"
     end
   end
